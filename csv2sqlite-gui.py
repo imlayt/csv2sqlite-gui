@@ -26,6 +26,7 @@ my_db_file = 'C:/Users/imlay/OneDrive/Documents/testcsv2sqlite'
 # my_db_file = ''
 lightblue = '#b9def4'
 mediumblue = '#d2d2df'
+mediumblue2 = '#534aea'
 
 
 # Set read mode based on Python version
@@ -276,13 +277,16 @@ mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justifica
             [sg.Text('Database File Name', justification='right', size=(20, 1)), sg.InputText(key='_DBFILENAME_', size=(80, 1))],
             [sg.Text('Table Name', justification='right', size=(20,1)), sg.InputText(key='_TABLENAME_', size=(80, 1))],
             [sg.Button('Edit', key='_BUTTON-EDIT-CONTACT_', disabled=False), sg.Button('New', key='_BUTTON-NEW-CONTACT_', disabled=False)]]
+			
+
+mainscreencolumn2 = [[sg.Listbox(values='', size=(15, 20), background_color=mediumblue2)]]
 
 
-mainscreenlayout = [[sg.Text('Company List', background_color=mediumblue, size=(30,1)), sg.Text('Contact List', background_color=mediumblue,  size=(30,1)), sg.Input(key='_CONTACTID_', visible=True)],
-        [sg.Column(mainscreencolumn1, background_color=mediumblue)],
+mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
         [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1)),
          sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-        [sg.Multiline(size=(140, 10), key='_CSVROWS_')],
+        [sg.Column(mainscreencolumn2, background_color=lightblue)],
+		[sg.Multiline(size=(140, 10), key='_CSVROWS_')],
         [sg.Multiline(size=(140, 10), key='_DBTABLEROWS_')],
         [sg.Text('Message Area', size=(140,1),key='_MESSAGEAREA_')],
         [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
@@ -321,7 +325,7 @@ thetablename = gettablename('mytablename')
 
 # ########################################
 # initialize main screen window
-window = sg.Window('CSV-2-Sqlite3', background_color='#534aea', default_element_size=(20, 1)).Layout(mainscreenlayout)
+window = sg.Window('CSV-2-Sqlite3', background_color=mediumblue2, default_element_size=(20, 1)).Layout(mainscreenlayout)
 window.Finalize()
 
 
