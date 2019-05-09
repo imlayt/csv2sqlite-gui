@@ -27,15 +27,64 @@ my_db_file = 'C:/Users/imlay/OneDrive/Documents/testcsv2sqlite'
 lightblue = '#b9def4'
 mediumblue = '#d2d2df'
 
+
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
     read_mode = 'rt'
 else:
     read_mode = 'rU'
+csvdata = []
 
+
+# create a database connection to a SQLite database
+def create_connection(my_db_file):
+    if not os.path.isfile(my_db_file):
+        my_db_file = sg.PopupGetFile('Please enter a database file name',
+                                     default_path='C:/Users/imlay/OneDrive/Documents/')
+    if not os.path.isfile(my_db_file):
+        sg.Popup('No Database File Found')
+        sys.exit(1)
+    try:
+        conn = sqlite3.connect(my_db_file)
+        print("sqlite3 version=", sqlite3.version)
+        return conn
+    except Error as e:
+        print(e)
+        sg.Popup('Could not connect to the database')
+        sys.exit(1)
+
+
+def fill_csv_listbox(window, values):
+# #################################
+    csvdata = []
+    csvfilename = values['_CSVFILENAME_']
+    with open(csvfilename, newline='') as f:
+        reader = csv.reader(f)
+        indx = 1
+        for row in reader:
+            csvdata += {row[1], '|', row[3], '|', row[5], '\n'}
+            indx += 1
+            if indx > 19:
+                break
+    window.FindElement('_CSVROWS_').Update(csvdata)
+
+
+def fill_db_listbox(window, values, con):
+# #################################
+    dbdata = []
+    cur = con.cursor()
+    tablename = values['_TABLENAME_']
+    cur.execute('SELECT * FROM %s LIMIT 20;' % tablename)
+    dbdata = cur.fetchall()
+    window.FindElement('_DBTABLEROWS_').Update(dbdata)
+
+
+def write_to_message_area(window, message):
+    window.FindElement('_MESSAGEAREA_').Update(message)
+    window.Refresh()
 
 # convert the CSV file to a sqlite3 table
-def convert(filepath_or_fileobj, dbpath, table, headerspath_or_fileobj=None, compression=None, typespath_or_fileobj=None):
+def convert(filepath_or_fileobj, dbpath, table, window, headerspath_or_fileobj=None, compression=None, typespath_or_fileobj=None):
     if isinstance(filepath_or_fileobj, string_types):
         if compression is None:
             fo = open(filepath_or_fileobj, mode=read_mode)
@@ -90,7 +139,7 @@ def convert(filepath_or_fileobj, dbpath, table, headerspath_or_fileobj=None, com
     _columns = ','.join(
         ['"%s" %s' % (header, _type) for (header,_type) in zip(headers, types)]
         )
-
+    # sg.Popup('_columns=', _columns)
     reader = csv.reader(fo, dialect)
     if not header_given: # Skip the header
         next(reader)
@@ -152,6 +201,10 @@ def getdbfilename(defaultfilename):
         sg.Popup('No database File Found - a new file will be created', dbfilename)
         # sys.exit(1)
     return dbfilename
+
+def gettablename(defaulttablename):
+    tablename = sg.PopupGetText('Please enter a table name',default_text=defaulttablename)
+    return tablename
 
 
 # Guess the column types based on the first 100 rows
@@ -219,8 +272,9 @@ def _guess_types(reader, number_of_columns, max_sample_size=100):
 # define layouts
 # layout mainscreen window
 mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justification='center', size=(25, 1))],
-            [sg.Text('CSV File Name', justification='right', size=(20,1)), sg.InputText(key='_CSVFILENAME_', size=(80, 1))],
+            [sg.Text('CSV File Name', justification='right', size=(20,1)), sg.InputText(key='_CSVFILENAME_', size=(80, 1), enable_events=True)],
             [sg.Text('Database File Name', justification='right', size=(20, 1)), sg.InputText(key='_DBFILENAME_', size=(80, 1))],
+            [sg.Text('Table Name', justification='right', size=(20,1)), sg.InputText(key='_TABLENAME_', size=(80, 1))],
             [sg.Button('Edit', key='_BUTTON-EDIT-CONTACT_', disabled=False), sg.Button('New', key='_BUTTON-NEW-CONTACT_', disabled=False)]]
 
 
@@ -228,7 +282,8 @@ mainscreenlayout = [[sg.Text('Company List', background_color=mediumblue, size=(
         [sg.Column(mainscreencolumn1, background_color=mediumblue)],
         [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1)),
          sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-        [sg.Multiline(size=(70, 15), key='_CSVROWS_'), sg.Multiline(size=(70, 15), key='_DBTABLEROWS_')],
+        [sg.Multiline(size=(140, 10), key='_CSVROWS_')],
+        [sg.Multiline(size=(140, 10), key='_DBTABLEROWS_')],
         [sg.Text('Message Area', size=(140,1),key='_MESSAGEAREA_')],
         [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
 
@@ -261,6 +316,7 @@ The database is created if it does not yet exist.
 # get the file names
 thecsvfile = getcsvfilename('mycsvfilename')
 thedbfile = getdbfilename('mydbfilename')
+thetablename = gettablename('mytablename')
 
 
 # ########################################
@@ -273,20 +329,24 @@ window.Finalize()
 # get filenames
 window.FindElement('_CSVFILENAME_').Update(thecsvfile)
 window.FindElement('_DBFILENAME_').Update(thedbfile)
+window.FindElement('_TABLENAME_').Update(thetablename)
 window.Refresh()
+
 
 
 # event loop
 while True:  # Event Loop
     event, values = window.Read()
     if event is None or event == "Exit":
-        sg.Popup('event is EXIT')
+        # sg.Popup('event is EXIT')
         sys.exit(1)
     elif event == '_CONVERT_':
-        window.FindElement('_MESSAGEAREA_').Update('Converting the file')
-        convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], 'MYTABLE')
-        window.FindElement('_MESSAGEAREA_').Update('SUCCESS - Table converted')
-        window.Refresh()
+        fill_csv_listbox(window, values)
+        write_to_message_area(window, 'Converting the file')
+        convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], window)
+        write_to_message_area(window, 'SUCCESS - File converted')
+        con = create_connection(thedbfile)
+        fill_db_listbox(window, values, con)
 
 
     # convert(args.csv_file, args.sqlite_db_file, args.table_name, args.headers, compression, args.types)
