@@ -191,7 +191,7 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
         return False
     else:
         _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headers)))
-        sg.Popup('_insert_tmp1 =>', _insert_tmpl)
+        # sg.Popup('_insert_tmp1 =>', _insert_tmpl)
 
         line = 0
         for row in reader:
@@ -209,9 +209,9 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
                 c.execute(_insert_tmpl, row)
             except ValueError as e:
                 # print("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
-                sg.Popup("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
+                sg.Popup("ValueError Unable to convert value '%s' to type '%s' on line %d" % (x, y, line))
             except Exception as e:
-                print("Error on line %d: %s" % (line, e), file=sys.stderr)
+                sg.Popup("Error on line %d: %s" % (line, e))
 
         conn.commit()
         c.close()
