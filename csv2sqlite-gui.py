@@ -166,7 +166,10 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
     headers = get_csv_headers(fo, dialect, values, window, headerspath_or_fileobj=None)
 
     types = get_csv_types(fo, events, window, headers, dialect, typespath_or_fileobj=None)
-
+    window.FindElement('_TYPES_').Update(types)
+    window.Refresh()
+    # sg.Popup('headers=>', headers)
+    sg.Popup('types=',types)
 
     # now load data
     _columns = ','.join(
@@ -241,6 +244,10 @@ def getdbfilename(defaultfilename):
 def gettablename(defaulttablename):
     tablename = sg.PopupGetText('Please enter a table name',default_text=defaulttablename)
     return tablename
+	
+
+def updatecolumnheader(events, window):
+	sg.Popup('_UPDATECOLUMNHEADING_')
 
 
 # Guess the column types based on the first 100 rows
@@ -314,21 +321,22 @@ mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justifica
             [sg.Button('Edit', key='_BUTTON-EDIT-CONTACT_', disabled=False), sg.Button('New', key='_BUTTON-NEW-CONTACT_', disabled=False)]]
 			
 
-mainscreencolumn2 = [[sg.Listbox(values='', size=(15, 20), key='_HEADERS_',enable_events=True)]]
+mainscreencolumn2 = [[sg.Listbox(values='', size=(15, 20), key='_HEADERS_', enable_events=True), sg.Listbox(values='', size=(15, 20), key='_TYPES_')]]
 
 
-mainscreencolumn3 = [[sg.Multiline(size=(140, 10), key='_CSVROWS_')],
-            [sg.Multiline(size=(140, 10), key='_DBTABLEROWS_')]]
+mainscreencolumn3 = [[sg.Multiline(size=(120, 10), key='_CSVROWS_')],
+			[sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
+            [sg.Multiline(size=(120, 10), key='_DBTABLEROWS_')]]
 
-mainscreencolumn4 = [[sg.Text('Column Heading', size=(15, 1), justification='right'), sg.InputText(key='_HEADERCHANGE_', size=(20, 1))],
-                     [sg.Text('Column Type', size=(15, 1) ,justification='right'), sg.InputText(key='_COLUMNTYPECHANGE_', size=(20, 1))]]
+mainscreencolumn4 = [[sg.Text('Column Heading', size=(15, 1), justification='right'), sg.InputText(key='_HEADERCHANGE_', size=(30, 1))],
+                     [sg.Text('Column Type', size=(15, 1) ,justification='right'), sg.InputText(key='_COLUMNTYPECHANGE_', size=(30, 1))],
+					 [sg.Button('Update', key='_UPDATECOLUMNHEADING_')]]
 
 mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue), sg.Column(mainscreencolumn4)],
-        [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1)),
-         sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
+        [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1))],
         [sg.Column(mainscreencolumn3, background_color=lightblue),
          sg.Column(mainscreencolumn2, background_color=lightblue)],
-        [sg.Text('Message Area', size=(140,1),key='_MESSAGEAREA_')],
+        [sg.Text('Message Area', size=(120,1),key='_MESSAGEAREA_')],
         [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
 
 if __name__ == '__main__':
@@ -387,7 +395,6 @@ while True:  # Event Loop
     elif event == '_CONVERT_':
         fill_csv_listbox(window, values)
         write_to_message_area(window, 'Converting the file')
-
         converttf = convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
         if converttf:
             write_to_message_area(window, 'SUCCESS - File converted')
@@ -398,6 +405,9 @@ while True:  # Event Loop
     elif event == '_HEADERS_':
         # sg.Popup('_HEADERS_ changed. current value=>', values['_HEADERS_'])
         window.FindElement('_HEADERCHANGE_').Update(values['_HEADERS_'][0])
+    elif event == '_UPDATECOLUMNHEADING_':
+        sg.Popup('_UPDATECOLUMNHEADING_')
+        updatecolumnheader(values, window)
 
 
     # convert(args.csv_file, args.sqlite_db_file, args.table_name, args.headers, compression, args.types)
