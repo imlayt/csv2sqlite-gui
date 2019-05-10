@@ -391,6 +391,9 @@ while True:  # Event Loop
             write_to_message_area(window, 'SUCCESS - File converted')
             con = create_connection(thedbfile)
             fill_db_listbox(window, values, con)
+        else:
+            write_to_message_area(window, 'FAIL - File NOT converted')
+
 
 
     # convert(args.csv_file, args.sqlite_db_file, args.table_name, args.headers, compression, args.types)
