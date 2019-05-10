@@ -182,35 +182,41 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
     conn.text_factory = str
     c = conn.cursor()
 
-    create_query = 'CREATE TABLE %s (%s)' % (table, _columns)
-    c.execute(create_query)
+    try:
+        create_query = 'CREATE TABLE %s (%s)' % (table, _columns)
+        c.execute(create_query)
 
-    _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table,
-        ','.join(['?']*len(headers)))
+    except:
+        sg.Popup('table already exists, please enter a different one: ', table)
+        return False
+    else:
+        _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headers)))
+        sg.Popup('_insert_tmp1 =>', _insert_tmpl)
 
-    line = 0
-    for row in reader:
-        line += 1
-        if len(row) == 0:
-            continue
-        # we need to take out commas from int and floats for sqlite to
-        # recognize them properly ...
-        try:
-            row = [
-                None if x == ''
-                else float(x.replace(',', '')) if y == 'real'
-                else int(x) if y == 'integer'
-                else x for (x,y) in zip(row, types) ]
-            c.execute(_insert_tmpl, row)
-        except ValueError as e:
-            # print("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
-            sg.Popup("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
-        except Exception as e:
-            print("Error on line %d: %s" % (line, e), file=sys.stderr)
+        line = 0
+        for row in reader:
+            line += 1
+            if len(row) == 0:
+                continue
+            # we need to take out commas from int and floats for sqlite to
+            # recognize them properly ...
+            try:
+                row = [
+                    None if x == ''
+                    else float(x.replace(',', '')) if y == 'real'
+                    else int(x) if y == 'integer'
+                    else x for (x, y) in zip(row, types)]
+                c.execute(_insert_tmpl, row)
+            except ValueError as e:
+                # print("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
+                sg.Popup("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
+            except Exception as e:
+                print("Error on line %d: %s" % (line, e), file=sys.stderr)
 
+        conn.commit()
+        c.close()
+        return True
 
-    conn.commit()
-    c.close()
 
 
 def getcsvfilename(defaultfilename):
@@ -379,10 +385,12 @@ while True:  # Event Loop
     elif event == '_CONVERT_':
         fill_csv_listbox(window, values)
         write_to_message_area(window, 'Converting the file')
-        convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
-        write_to_message_area(window, 'SUCCESS - File converted')
-        con = create_connection(thedbfile)
-        fill_db_listbox(window, values, con)
+
+        converttf = convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
+        if converttf:
+            write_to_message_area(window, 'SUCCESS - File converted')
+            con = create_connection(thedbfile)
+            fill_db_listbox(window, values, con)
 
 
     # convert(args.csv_file, args.sqlite_db_file, args.table_name, args.headers, compression, args.types)
