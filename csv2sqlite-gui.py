@@ -314,14 +314,16 @@ mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justifica
             [sg.Button('Edit', key='_BUTTON-EDIT-CONTACT_', disabled=False), sg.Button('New', key='_BUTTON-NEW-CONTACT_', disabled=False)]]
 			
 
-mainscreencolumn2 = [[sg.Listbox(values='', size=(15, 20), key='_HEADERS_')]]
+mainscreencolumn2 = [[sg.Listbox(values='', size=(15, 20), key='_HEADERS_',enable_events=True)]]
 
 
 mainscreencolumn3 = [[sg.Multiline(size=(140, 10), key='_CSVROWS_')],
             [sg.Multiline(size=(140, 10), key='_DBTABLEROWS_')]]
 
+mainscreencolumn4 = [[sg.Text('Column Heading', size=(15, 1), justification='right'), sg.InputText(key='_HEADERCHANGE_', size=(20, 1))],
+                     [sg.Text('Column Type', size=(15, 1) ,justification='right'), sg.InputText(key='_COLUMNTYPECHANGE_', size=(20, 1))]]
 
-mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
+mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue), sg.Column(mainscreencolumn4)],
         [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1)),
          sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
         [sg.Column(mainscreencolumn3, background_color=lightblue),
@@ -393,7 +395,9 @@ while True:  # Event Loop
             fill_db_listbox(window, values, con)
         else:
             write_to_message_area(window, 'FAIL - File NOT converted')
-
+    elif event == '_HEADERS_':
+        # sg.Popup('_HEADERS_ changed. current value=>', values['_HEADERS_'])
+        window.FindElement('_HEADERCHANGE_').Update(values['_HEADERS_'][0])
 
 
     # convert(args.csv_file, args.sqlite_db_file, args.table_name, args.headers, compression, args.types)
