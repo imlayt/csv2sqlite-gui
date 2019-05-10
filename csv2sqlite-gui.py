@@ -84,8 +84,9 @@ def write_to_message_area(window, message):
     window.FindElement('_MESSAGEAREA_').Update(message)
     window.Refresh()
 
-# convert the CSV file to a sqlite3 table
-def convert(filepath_or_fileobj, dbpath, table, window, headerspath_or_fileobj=None, compression=None, typespath_or_fileobj=None):
+
+def open_csv_file(filepath_or_fileobj):
+    # sg.Popup('open_csv_file')
     if isinstance(filepath_or_fileobj, string_types):
         if compression is None:
             fo = open(filepath_or_fileobj, mode=read_mode)
@@ -98,13 +99,15 @@ def convert(filepath_or_fileobj, dbpath, table, window, headerspath_or_fileobj=N
             fo = gzip.open(filepath_or_fileobj, mode=read_mode)
     else:
         fo = filepath_or_fileobj
+    return(fo)
 
-    try:
-        dialect = csv.Sniffer().sniff(fo.readline())
-    except TypeError:
-        dialect = csv.Sniffer().sniff(str(fo.readline()))
-    fo.seek(0)
 
+def close_csv_file(filepointer):
+    fo=filepointer
+    fo.close
+
+def get_csv_headers(fo, dialect, events, window, headerspath_or_fileobj=None):
+    # sg.Popup('get_csv_headers')
     # get the headers
     header_given = headerspath_or_fileobj is not None
     if header_given:
@@ -118,8 +121,15 @@ def convert(filepath_or_fileobj, dbpath, table, window, headerspath_or_fileobj=N
     else:
         reader = csv.reader(fo, dialect)
         headers = [header.strip() for header in next(reader)]
+        window.FindElement('_HEADERS_').Update(headers)
+        window.Refresh()
+        # sg.Popup('headers=>', headers)
         fo.seek(0)
+    return headers
 
+def get_csv_types(fo, events, window, headers, dialect, typespath_or_fileobj=None, headerspath_or_fileobj=None):
+    # sg.Popup('get_csv_types')
+    header_given = headerspath_or_fileobj is not None
     # get the types
     if typespath_or_fileobj is not None:
         if isinstance(typespath_or_fileobj, string_types):
@@ -136,6 +146,28 @@ def convert(filepath_or_fileobj, dbpath, table, window, headerspath_or_fileobj=N
         types = _guess_types(type_reader, len(headers))
         fo.seek(0)
 
+    return types
+
+
+def read_csv_write_db(filepointer, dbfilepath, events, window):
+    sg.Popup('read_csv_write_db')
+
+
+# convert the CSV file to a sqlite3 table
+def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_fileobj=None, compression=None, typespath_or_fileobj=None):
+    header_given = headerspath_or_fileobj is not None
+    fo = open_csv_file(filepath_or_fileobj)
+    try:
+        dialect = csv.Sniffer().sniff(fo.readline())
+    except TypeError:
+        dialect = csv.Sniffer().sniff(str(fo.readline()))
+    fo.seek(0)
+
+    headers = get_csv_headers(fo, dialect, values, window, headerspath_or_fileobj=None)
+
+    types = get_csv_types(fo, events, window, headers, dialect, typespath_or_fileobj=None)
+
+
     # now load data
     _columns = ','.join(
         ['"%s" %s' % (header, _type) for (header,_type) in zip(headers, types)]
@@ -150,11 +182,8 @@ def convert(filepath_or_fileobj, dbpath, table, window, headerspath_or_fileobj=N
     conn.text_factory = str
     c = conn.cursor()
 
-    try:
-        create_query = 'CREATE TABLE %s (%s)' % (table, _columns)
-        c.execute(create_query)
-    except:
-        pass
+    create_query = 'CREATE TABLE %s (%s)' % (table, _columns)
+    c.execute(create_query)
 
     _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table,
         ','.join(['?']*len(headers)))
@@ -279,15 +308,18 @@ mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justifica
             [sg.Button('Edit', key='_BUTTON-EDIT-CONTACT_', disabled=False), sg.Button('New', key='_BUTTON-NEW-CONTACT_', disabled=False)]]
 			
 
-mainscreencolumn2 = [[sg.Listbox(values='', size=(15, 20), background_color=mediumblue2)]]
+mainscreencolumn2 = [[sg.Listbox(values='', size=(15, 20), key='_HEADERS_')]]
+
+
+mainscreencolumn3 = [[sg.Multiline(size=(140, 10), key='_CSVROWS_')],
+            [sg.Multiline(size=(140, 10), key='_DBTABLEROWS_')]]
 
 
 mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
         [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1)),
          sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-        [sg.Column(mainscreencolumn2, background_color=lightblue)],
-		[sg.Multiline(size=(140, 10), key='_CSVROWS_')],
-        [sg.Multiline(size=(140, 10), key='_DBTABLEROWS_')],
+        [sg.Column(mainscreencolumn3, background_color=lightblue),
+         sg.Column(mainscreencolumn2, background_color=lightblue)],
         [sg.Text('Message Area', size=(140,1),key='_MESSAGEAREA_')],
         [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
 
@@ -347,7 +379,7 @@ while True:  # Event Loop
     elif event == '_CONVERT_':
         fill_csv_listbox(window, values)
         write_to_message_area(window, 'Converting the file')
-        convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], window)
+        convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
         write_to_message_area(window, 'SUCCESS - File converted')
         con = create_connection(thedbfile)
         fill_db_listbox(window, values, con)
