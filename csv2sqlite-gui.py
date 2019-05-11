@@ -121,8 +121,8 @@ def get_csv_headers(fo, dialect, events, window, headerspath_or_fileobj=None):
     else:
         reader = csv.reader(fo, dialect)
         headers = [header.strip() for header in next(reader)]
-        window.FindElement('_HEADERS_').Update(headers)
-        window.Refresh()
+        # window.FindElement('_HEADERS_').Update(headers)
+        # window.Refresh()
         # sg.Popup('headers=>', headers)
         fo.seek(0)
     return headers
@@ -166,10 +166,18 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
     headers = get_csv_headers(fo, dialect, values, window, headerspath_or_fileobj=None)
 
     types = get_csv_types(fo, events, window, headers, dialect, typespath_or_fileobj=None)
-    window.FindElement('_TYPES_').Update(types)
+
+    theheaders = []
+    theheaders = [x.replace(" ", "") for x in headers]
+
+    sg.Popup('theheaders=>', theheaders)
+    headersandtypes = list(zip(theheaders, types))
+    sg.Popup('headersandtypes=>', headersandtypes)
+
+    window.FindElement('_HEADERS_').Update(headersandtypes)
     window.Refresh()
     # sg.Popup('headers=>', headers)
-    sg.Popup('types=',types)
+    # sg.Popup('types=',types)
 
     # now load data
     _columns = ','.join(
@@ -404,9 +412,11 @@ while True:  # Event Loop
             write_to_message_area(window, 'FAIL - File NOT converted')
     elif event == '_HEADERS_':
         # sg.Popup('_HEADERS_ changed. current value=>', values['_HEADERS_'])
-        window.FindElement('_HEADERCHANGE_').Update(values['_HEADERS_'][0])
+        aheader, atype = values['_HEADERS_'][0]
+        window.FindElement('_HEADERCHANGE_').Update(aheader)
+        window.FindElement('_COLUMNTYPECHANGE_').Update(atype)
     elif event == '_UPDATECOLUMNHEADING_':
-        sg.Popup('_UPDATECOLUMNHEADING_')
+        # sg.Popup('_UPDATECOLUMNHEADING_')
         updatecolumnheader(values, window)
 
 
