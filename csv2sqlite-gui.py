@@ -21,13 +21,14 @@ import PySimpleGUI as sg
 from six import string_types, text_type
 
 
+
 # Variables
 my_db_file = 'C:/Users/imlay/OneDrive/Documents/testcsv2sqlite'
 # my_db_file = ''
 lightblue = '#b9def4'
 mediumblue = '#d2d2df'
 mediumblue2 = '#534aea'
-
+headersandtypes = []
 
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
@@ -153,8 +154,24 @@ def read_csv_write_db(filepointer, dbfilepath, events, window):
     sg.Popup('read_csv_write_db')
 
 
+def tableexists(con, tablename):
+    # sg.Popup('table=>', tablename)
+    sql2 = "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%s' ;" % tablename
+
+    cur = con.cursor()
+    cur.execute(sql2)
+
+    thetablename = cur.fetchall()
+    # sg.Popup('thetablename=>', thetablename)
+
+    if len(thetablename) == 0:
+        return False
+    else:
+        return True
+
 # convert the CSV file to a sqlite3 table
 def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_fileobj=None, compression=None, typespath_or_fileobj=None):
+    global headersandtypes
     header_given = headerspath_or_fileobj is not None
     fo = open_csv_file(filepath_or_fileobj)
     try:
@@ -167,16 +184,18 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
 
     types = get_csv_types(fo, events, window, headers, dialect, typespath_or_fileobj=None)
 
-    theheaders = []
-    theheaders = [x.replace(" ", "") for x in headers]
+    # replace spaces in the column names with '_'
+    theheaders = [x.replace(" ", "_") for x in headers]
 
-    sg.Popup('theheaders=>', theheaders)
+    # sg.Popup('theheaders=>', theheaders)
     headersandtypes = list(zip(theheaders, types))
-    sg.Popup('headersandtypes=>', headersandtypes)
+    dheadersandtypes = dict(headersandtypes)
+    # print("dheadersandtypes", dheadersandtypes)
+    # sg.Popup('headersandtypes=>', headersandtypes)
 
     window.FindElement('_HEADERS_').Update(headersandtypes)
     window.Refresh()
-    # sg.Popup('headers=>', headers)
+    # sg.Popup('headers=>', headersandtypes)
     # sg.Popup('types=',types)
 
     # now load data
@@ -193,12 +212,16 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
     conn.text_factory = str
     c = conn.cursor()
 
+    if tableexists(conn, table):
+        # sg.Popup('Table already exists, please enter a different one: ', table)
+        return False
+
     try:
         create_query = 'CREATE TABLE %s (%s)' % (table, _columns)
         c.execute(create_query)
 
     except:
-        sg.Popup('table already exists, please enter a different one: ', table)
+        sg.Popup('Creating table FAILED(', table, ')')
         return False
     else:
         _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headers)))
@@ -255,7 +278,9 @@ def gettablename(defaulttablename):
 	
 
 def updatecolumnheader(events, window):
-	sg.Popup('_UPDATECOLUMNHEADING_')
+    # sg.Popup('_UPDATECOLUMNHEADING_')
+    global headersandtypes
+    window.FindElement('_TYPES_').Update(headersandtypes)
 
 
 # Guess the column types based on the first 100 rows
@@ -326,15 +351,15 @@ mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justifica
             [sg.Text('CSV File Name', justification='right', size=(20,1)), sg.InputText(key='_CSVFILENAME_', size=(80, 1), enable_events=True)],
             [sg.Text('Database File Name', justification='right', size=(20, 1)), sg.InputText(key='_DBFILENAME_', size=(80, 1))],
             [sg.Text('Table Name', justification='right', size=(20,1)), sg.InputText(key='_TABLENAME_', size=(80, 1))],
-            [sg.Button('Edit', key='_BUTTON-EDIT-CONTACT_', disabled=False), sg.Button('New', key='_BUTTON-NEW-CONTACT_', disabled=False)]]
+            [sg.Button('Check Filenames', key='_BUTTON-CHECK-FILENAMES_', disabled=False)]]
 			
 
-mainscreencolumn2 = [[sg.Listbox(values='', size=(15, 20), key='_HEADERS_', enable_events=True), sg.Listbox(values='', size=(15, 20), key='_TYPES_')]]
+mainscreencolumn2 = [[sg.Listbox(values='', size=(25, 20), key='_HEADERS_', enable_events=True), sg.Listbox(values='', size=(25, 20), key='_TYPES_')]]
 
 
-mainscreencolumn3 = [[sg.Multiline(size=(120, 10), key='_CSVROWS_')],
+mainscreencolumn3 = [[sg.Multiline(size=(100, 10), key='_CSVROWS_')],
 			[sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-            [sg.Multiline(size=(120, 10), key='_DBTABLEROWS_')]]
+            [sg.Multiline(size=(100, 10), key='_DBTABLEROWS_')]]
 
 mainscreencolumn4 = [[sg.Text('Column Heading', size=(15, 1), justification='right'), sg.InputText(key='_HEADERCHANGE_', size=(30, 1))],
                      [sg.Text('Column Type', size=(15, 1) ,justification='right'), sg.InputText(key='_COLUMNTYPECHANGE_', size=(30, 1))],
@@ -418,6 +443,8 @@ while True:  # Event Loop
     elif event == '_UPDATECOLUMNHEADING_':
         # sg.Popup('_UPDATECOLUMNHEADING_')
         updatecolumnheader(values, window)
+    elif event == '_BUTTON-CHECK-FILENAMES_':
+        sg.Popup('_BUTTON-CHECK-FILENAMES_')
 
 
     # convert(args.csv_file, args.sqlite_db_file, args.table_name, args.headers, compression, args.types)
