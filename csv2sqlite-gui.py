@@ -29,6 +29,9 @@ lightblue = '#b9def4'
 mediumblue = '#d2d2df'
 mediumblue2 = '#534aea'
 headersandtypes = []
+dialect = ''
+header_given =''
+types = []
 
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
@@ -44,7 +47,7 @@ def create_connection(my_db_file):
         my_db_file = sg.PopupGetFile('Please enter a database file name',
                                      default_path='C:/Users/imlay/OneDrive/Documents/')
     if not os.path.isfile(my_db_file):
-        sg.Popup('No Database File Found')
+        sg.Popup('No Database File Found',keep_on_top=True)
         sys.exit(1)
     try:
         conn = sqlite3.connect(my_db_file)
@@ -52,7 +55,7 @@ def create_connection(my_db_file):
         return conn
     except Error as e:
         print(e)
-        sg.Popup('Could not connect to the database')
+        sg.Popup('Could not connect to the database',keep_on_top=True)
         sys.exit(1)
 
 
@@ -126,9 +129,14 @@ def get_csv_headers(fo, dialect, events, window, headerspath_or_fileobj=None):
         # window.Refresh()
         # sg.Popup('headers=>', headers)
         fo.seek(0)
-    return headers
 
-def get_csv_types(fo, events, window, headers, dialect, typespath_or_fileobj=None, headerspath_or_fileobj=None):
+    # replace spaces in the column names with '_'
+    theheaders = [x.replace(" ", "_") for x in headers]
+    return theheaders
+
+def get_csv_types(fo, window, headers, dialect, typespath_or_fileobj=None, headerspath_or_fileobj=None):
+    global header_given
+    global types
     # sg.Popup('get_csv_types')
     header_given = headerspath_or_fileobj is not None
     # get the types
@@ -155,6 +163,7 @@ def read_csv_write_db(filepointer, dbfilepath, events, window):
 
 
 def tableexists(con, tablename):
+    # returns True if the table already exists and False if noe
     # sg.Popup('table=>', tablename)
     sql2 = "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%s' ;" % tablename
 
@@ -172,37 +181,18 @@ def tableexists(con, tablename):
 # convert the CSV file to a sqlite3 table
 def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_fileobj=None, compression=None, typespath_or_fileobj=None):
     global headersandtypes
-    header_given = headerspath_or_fileobj is not None
-    fo = open_csv_file(filepath_or_fileobj)
-    try:
-        dialect = csv.Sniffer().sniff(fo.readline())
-    except TypeError:
-        dialect = csv.Sniffer().sniff(str(fo.readline()))
-    fo.seek(0)
 
-    headers = get_csv_headers(fo, dialect, values, window, headerspath_or_fileobj=None)
-
-    types = get_csv_types(fo, events, window, headers, dialect, typespath_or_fileobj=None)
-
-    # replace spaces in the column names with '_'
-    theheaders = [x.replace(" ", "_") for x in headers]
-
-    # sg.Popup('theheaders=>', theheaders)
-    headersandtypes = list(zip(theheaders, types))
-    dheadersandtypes = dict(headersandtypes)
-    # print("dheadersandtypes", dheadersandtypes)
-    # sg.Popup('headersandtypes=>', headersandtypes)
-
-    window.FindElement('_HEADERS_').Update(headersandtypes)
-    window.Refresh()
-    # sg.Popup('headers=>', headersandtypes)
-    # sg.Popup('types=',types)
+    fo = fillheadersandtypes(filepath_or_fileobj, window)
 
     # now load data
     _columns = ','.join(
-        ['"%s" %s' % (header, _type) for (header,_type) in zip(headers, types)]
+        ['"%s" %s' % (header, _type) for (header,_type) in headersandtypes]
         )
-    # sg.Popup('_columns=', _columns)
+    # _columns = ','.join(
+    #     ['"%s" %s' % (header, _type) for (header,_type) in zip(headers, types)]
+    #     )
+
+    # sg.Popup('_columns=', _columns,keep_on_top=True)
     reader = csv.reader(fo, dialect)
     if not header_given: # Skip the header
         next(reader)
@@ -218,14 +208,14 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
 
     try:
         create_query = 'CREATE TABLE %s (%s)' % (table, _columns)
+        sg.Popup('create_query', create_query,keep_on_top=True)
         c.execute(create_query)
-
     except:
-        sg.Popup('Creating table FAILED(', table, ')')
+        sg.Popup('Creating table FAILED(', table, ')',keep_on_top=True)
         return False
     else:
-        _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headers)))
-        # sg.Popup('_insert_tmp1 =>', _insert_tmpl)
+        _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headersandtypes)))
+        # vsg.Popup('len(headersandtypes', len(headersandtypes))
 
         line = 0
         for row in reader:
@@ -242,23 +232,49 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
                     else x for (x, y) in zip(row, types)]
                 c.execute(_insert_tmpl, row)
             except ValueError as e:
-                # print("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
-                sg.Popup("ValueError Unable to convert value '%s' to type '%s' on line %d" % (x, y, line))
+                print("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
             except Exception as e:
-                sg.Popup("Error on line %d: %s" % (line, e))
+                print("Error on line %d: %s" % (line, e), file=sys.stderr)
+    conn.commit()
+    c.close()
+    return True
 
-        conn.commit()
-        c.close()
-        return True
 
+def fillheadersandtypes(filepath_or_fileobj, window, headerspath_or_fileobj=None):
+    global headersandtypes
+    global dialect
+    header_given = headerspath_or_fileobj is not None
+    fo = open_csv_file(filepath_or_fileobj)
+    try:
+        dialect = csv.Sniffer().sniff(fo.readline())
+    except TypeError:
+        dialect = csv.Sniffer().sniff(str(fo.readline()))
+    fo.seek(0)
+
+    # get the list of headers
+    headers = get_csv_headers(fo, dialect, values, window, headerspath_or_fileobj=None)
+
+    # get the list of types
+    types = get_csv_types(fo, window, headers, dialect, typespath_or_fileobj=None)
+
+    # combine headers and types into space separated values
+    headersandtypes = list(zip(headers, types))
+
+    # make the list of headers and types into a dictionary object
+    # dheadersandtypes = dict(headersandtypes)
+
+    # fill the headers listbox
+    window.FindElement('_HEADERS_').Update(headersandtypes)
+    window.Refresh()
+    return fo
 
 
 def getcsvfilename(defaultfilename):
     if not os.path.isfile(defaultfilename):
         csvfilename = sg.PopupGetFile('Please enter a CSV file name',
-                                      default_path=defaultfilename)
+                                      default_path=defaultfilename,keep_on_top=True)
     if not os.path.isfile(csvfilename):
-        sg.Popup('No CSV File Found - exiting program', csvfilename)
+        sg.Popup('No CSV File Found - exiting program', csvfilename,keep_on_top=True)
         sys.exit(1)
     return csvfilename
 
@@ -266,14 +282,14 @@ def getcsvfilename(defaultfilename):
 def getdbfilename(defaultfilename):
     if not os.path.isfile(defaultfilename):
         dbfilename = sg.PopupGetFile('Please enter a database file name',
-        default_path=defaultfilename)
+        default_path=defaultfilename,keep_on_top=True)
     if not os.path.isfile(dbfilename):
-        sg.Popup('No database File Found - a new file will be created', dbfilename)
+        sg.Popup('No database File Found - a new file will be created', dbfilename,keep_on_top=True)
         # sys.exit(1)
     return dbfilename
 
 def gettablename(defaulttablename):
-    tablename = sg.PopupGetText('Please enter a table name',default_text=defaulttablename)
+    tablename = sg.PopupGetText('Please enter a table name',default_text=defaulttablename,keep_on_top=True)
     return tablename
 	
 
@@ -444,7 +460,7 @@ while True:  # Event Loop
         # sg.Popup('_UPDATECOLUMNHEADING_')
         updatecolumnheader(values, window)
     elif event == '_BUTTON-CHECK-FILENAMES_':
-        sg.Popup('_BUTTON-CHECK-FILENAMES_')
+        sg.Popup('_BUTTON-CHECK-FILENAMES_',keep_on_top=True)
 
 
     # convert(args.csv_file, args.sqlite_db_file, args.table_name, args.headers, compression, args.types)
