@@ -208,7 +208,7 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
 
     try:
         create_query = 'CREATE TABLE %s (%s)' % (table, _columns)
-        sg.Popup('create_query', create_query,keep_on_top=True)
+        # sg.Popup('create_query', create_query,keep_on_top=True)
         c.execute(create_query)
     except:
         sg.Popup('Creating table FAILED(', table, ')',keep_on_top=True)
@@ -438,11 +438,11 @@ window.Refresh()
 # event loop
 while True:  # Event Loop
     event, values = window.Read()
+    fill_csv_listbox(window, values)
     if event is None or event == "Exit":
         # sg.Popup('event is EXIT')
         sys.exit(1)
     elif event == '_CONVERT_':
-        fill_csv_listbox(window, values)
         write_to_message_area(window, 'Converting the file')
         converttf = convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
         if converttf:
