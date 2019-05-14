@@ -215,26 +215,41 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
         return False
     else:
         _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headersandtypes)))
-        # vsg.Popup('len(headersandtypes', len(headersandtypes))
+        # .Popup('len(headersandtypes', len(headersandtypes))
 
         line = 0
         for row in reader:
             line += 1
             if len(row) == 0:
                 continue
-            # we need to take out commas from int and floats for sqlite to
-            # recognize them properly ...
-            try:
-                row = [
-                    None if x == ''
-                    else float(x.replace(',', '')) if y == 'real'
-                    else int(x) if y == 'integer'
-                    else x for (x, y) in zip(row, types)]
+            else:
+                for column in range(0, len(row)):
+                    columntype = types[column]
+                    tmpvalue = str(row[column])
+
+                    # sg.Popup('row[column]=>', row[column])
+                    if len(str((row[column] == 0))):
+                        continue
+                    elif columntype == 'real':
+                        # sg.Popup('column, row=>', column, row)
+                        row[column] = tmpvalue.replace('$', '')
+                        tmpvalue = str(row[column])
+                        row[column] = tmpvalue.replace(',', '')
+                        tmpvalue = str(row[column])
+                        row[column] = tmpvalue.replace('(', '-')
+                        tmpvalue = str(row[column])
+                        row[column] = tmpvalue.replace(')', '')
+                    elif columntype == 'integer':
+                        tmpvalue = str(row[column])
+                        row[column] = tmpvalue.replace('$', '')
+                        tmpvalue = str(row[column])
+                        row[column] = tmpvalue.replace(',', '')
+                print('columntype, row', columntype, row)
                 c.execute(_insert_tmpl, row)
-            except ValueError as e:
-                print("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
-            except Exception as e:
-                print("Error on line %d: %s" % (line, e), file=sys.stderr)
+            #  except ValueError as e:
+            #      print("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
+            # except Exception as e:
+            #     print("Error on line %d: %s" % (line, e), file=sys.stderr)
     conn.commit()
     c.close()
     return True
@@ -272,7 +287,7 @@ def fillheadersandtypes(filepath_or_fileobj, window, headerspath_or_fileobj=None
 def getcsvfilename(defaultfilename):
     if not os.path.isfile(defaultfilename):
         csvfilename = sg.PopupGetFile('Please enter a CSV file name',
-                                      default_path=defaultfilename,keep_on_top=True)
+                                      default_path=defaultfilename, keep_on_top=True, file_types=(("CSV Files", "*.csv"),))
     if not os.path.isfile(csvfilename):
         sg.Popup('No CSV File Found - exiting program', csvfilename,keep_on_top=True)
         sys.exit(1)
@@ -282,7 +297,7 @@ def getcsvfilename(defaultfilename):
 def getdbfilename(defaultfilename):
     if not os.path.isfile(defaultfilename):
         dbfilename = sg.PopupGetFile('Please enter a database file name',
-        default_path=defaultfilename,keep_on_top=True)
+        default_path=defaultfilename,keep_on_top=True, file_types=(("Sqlite Files", "*.db"),))
     if not os.path.isfile(dbfilename):
         sg.Popup('No database File Found - a new file will be created', dbfilename,keep_on_top=True)
         # sys.exit(1)
@@ -332,10 +347,29 @@ def _guess_types(reader, number_of_columns, max_sample_size=100):
                 continue
 
             # replace ',' with '' to improve cast accuracy for ints and floats
-            if(cell.count(',') > 0):
-               cell = cell.replace(',', '')
+            if cell.count('$') > 0:
+               cell = cell.replace('$', '')
                if(cell.count('E') == 0):
                   cell = cell + "E0"
+
+            if cell[0].count('(') > 0:
+                cell = cell.replace('(', '-')
+                if (cell.count('E') == 0):
+                    cell = cell + "E0"
+
+            if cell.count(')') > 0:
+                cell = cell.replace(')', '')
+                if (cell.count('E') == 0):
+                    cell = cell + "E0"
+
+            # replace ',' with '' to improve cast accuracy for ints and floats
+            if cell.count(',') > 0:
+               cell = cell.replace(',', '')
+               if cell.count('E') == 0:
+                  cell = cell + "E0"
+
+            # if column == 18 or column == 17:
+               # print('column[17,18]', cell)
 
             for data_type,cast in options:
                 try:
