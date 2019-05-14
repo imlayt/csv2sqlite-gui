@@ -221,17 +221,19 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
         for row in reader:
             line += 1
             if len(row) == 0:
-                continue
+                continue    
             else:
                 for column in range(0, len(row)):
                     columntype = types[column]
                     tmpvalue = str(row[column])
-
-                    # sg.Popup('row[column]=>', row[column])
-                    if len(str((row[column] == 0))):
+                    # sg.Popup('columntype=>', columntype)
+                    # sg.Popup('tmpvalue=>', tmpvalue)
+                    
+                    if len(tmpvalue) == 0:
+                        # sg.Popup('len(tmpvalue) == 0', tmpvalue)
                         continue
                     elif columntype == 'real':
-                        # sg.Popup('column, row=>', column, row)
+                        # sg.Popup('real: column, row=>', column, row)
                         row[column] = tmpvalue.replace('$', '')
                         tmpvalue = str(row[column])
                         row[column] = tmpvalue.replace(',', '')
@@ -239,12 +241,14 @@ def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_f
                         row[column] = tmpvalue.replace('(', '-')
                         tmpvalue = str(row[column])
                         row[column] = tmpvalue.replace(')', '')
+                        # sg.Popup('str(row[column])=>', str(row[column]))
                     elif columntype == 'integer':
                         tmpvalue = str(row[column])
                         row[column] = tmpvalue.replace('$', '')
                         tmpvalue = str(row[column])
                         row[column] = tmpvalue.replace(',', '')
-                print('columntype, row', columntype, row)
+				# sg.Popup('row[column]=>', row[column])		
+                # print('columntype, row', columntype, row)
                 c.execute(_insert_tmpl, row)
             #  except ValueError as e:
             #      print("Unable to convert value '%s' to type '%s' on line %d" % (x, y, line), file=sys.stderr)
