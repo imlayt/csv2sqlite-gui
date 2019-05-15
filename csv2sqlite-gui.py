@@ -263,11 +263,12 @@ def fillheadersandtypes(filepath_or_fileobj, window, headerspath_or_fileobj=None
     # combine headers and types into space separated values
     headersandtypes = list(zip(headers, types))
 
-    for idx, eheadersandtypes in enumerate(headersandtypes):
-        print('enumerate headersandtypes', idx, eheadersandtypes)
+    # for idx, eheadsandtypes in enumerate(headersandtypes):
+    #     print('enumerate headersandtypes', idx, *eheadersandtypes)
 
     # make the list of headers and types into a dictionary object
-    # dheadersandtypes = dict(headersandtypes)
+    # dheadersandtypes = dict(list(*headersandtypes))
+    # print('dheadersandtypes =>', dheadersandtypes)
 
     # fill the headers listbox
     window.FindElement('_HEADERS_').Update(headersandtypes)
