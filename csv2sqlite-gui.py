@@ -63,13 +63,23 @@ def fill_csv_listbox(window, values):
     csvdata = []
     csvfilename = values['_CSVFILENAME_']
     with open(csvfilename, newline='') as f:
-        reader = csv.reader(f)
-        indx = 1
-        for row in reader:
-            csvdata += {row[1], '|', row[3], '|', row[5], '\n'}
-            indx += 1
-            if indx > 19:
-                break
+        # reader = csv.reader(f)
+        # printing first 5 rows 
+        # print('\nFirst 5 rows are:\n') 
+        # for row in rows[:5]: 
+            # parsing each column of a row 
+            # for col in row: 
+            # print("%10s"%col), 
+        # print('\n') 
+
+        for indx in range(19):
+            therow = csv.reader(f.readline())
+            csvdata += therow
+            if indx < 3:
+                print('therow is: ', type(therow))
+                print('csvdata is: ', type(csvdata))
+                print('csvdata=>', csvdata)
+
     window.FindElement('_CSVROWS_').Update(csvdata)
 
 
@@ -396,9 +406,9 @@ mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justifica
 mainscreencolumn2 = [[sg.Listbox(values='', size=(25, 20), key='_HEADERS_', enable_events=True), sg.Listbox(values='', size=(25, 20), key='_TYPES_')]]
 
 
-mainscreencolumn3 = [[sg.Multiline(size=(100, 10), key='_CSVROWS_')],
+mainscreencolumn3 = [[sg.Multiline(size=(100, 10), key='_CSVROWS_',autoscroll=False)],
 			[sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-            [sg.Multiline(size=(100, 10), key='_DBTABLEROWS_')]]
+            [sg.Multiline(size=(100, 10), key='_DBTABLEROWS_',autoscroll=False)]]
 
 mainscreencolumn4 = [[sg.Text('Column Heading', size=(15, 1), justification='right'), sg.InputText(key='_HEADERCHANGE_', size=(30, 1))],
                      [sg.Text('Column Type', size=(15, 1) ,justification='right'), sg.InputText(key='_COLUMNTYPECHANGE_', size=(30, 1))],
