@@ -21,10 +21,8 @@ import PySimpleGUI as sg
 from six import string_types, text_type
 
 
-
 # Variables
-my_db_file = 'C:/Users/imlay/OneDrive/Documents/testcsv2sqlite'
-# my_db_file = ''
+my_db_file = ''
 lightblue = '#b9def4'
 mediumblue = '#d2d2df'
 mediumblue2 = '#534aea'
@@ -32,6 +30,7 @@ headersandtypes = []
 dialect = ''
 header_given =''
 types = []
+compression = None
 
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
@@ -138,28 +137,12 @@ def get_csv_types(fo, window, headers, dialect, typespath_or_fileobj=None, heade
     global header_given
     global types
     # sg.Popup('get_csv_types')
-    header_given = headerspath_or_fileobj is not None
-    # get the types
-    if typespath_or_fileobj is not None:
-        if isinstance(typespath_or_fileobj, string_types):
-            to = open(typespath_or_fileobj, mode=read_mode)
-        else:
-            to = typespath_or_fileobj
-        type_reader = csv.reader(to, dialect)
-        types = [_type.strip() for _type in next(type_reader)]
-        to.close()
-    else:
-        # guess types
-        type_reader = csv.reader(fo, dialect)
-        if not header_given: next(type_reader)
-        types = _guess_types(type_reader, len(headers))
-        fo.seek(0)
-
+    # guess types
+    type_reader = csv.reader(fo, dialect)
+    if not header_given: next(type_reader)
+    types = _guess_types(type_reader, len(headers))
+    fo.seek(0)
     return types
-
-
-def read_csv_write_db(filepointer, dbfilepath, events, window):
-    sg.Popup('read_csv_write_db')
 
 
 def tableexists(con, tablename):
@@ -179,7 +162,7 @@ def tableexists(con, tablename):
         return True
 
 # convert the CSV file to a sqlite3 table
-def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_fileobj=None, compression=None, typespath_or_fileobj=None):
+def convert(filepath_or_fileobj, dbpath, table, events, window, headerspath_or_fileobj=None, typespath_or_fileobj=None):
     global headersandtypes
 
     fo = fillheadersandtypes(filepath_or_fileobj, window)
@@ -265,6 +248,7 @@ def fillheadersandtypes(filepath_or_fileobj, window, headerspath_or_fileobj=None
     header_given = headerspath_or_fileobj is not None
     fo = open_csv_file(filepath_or_fileobj)
     try:
+        # sg.Popup('fo =>', fo)
         dialect = csv.Sniffer().sniff(fo.readline())
     except TypeError:
         dialect = csv.Sniffer().sniff(str(fo.readline()))
@@ -278,6 +262,9 @@ def fillheadersandtypes(filepath_or_fileobj, window, headerspath_or_fileobj=None
 
     # combine headers and types into space separated values
     headersandtypes = list(zip(headers, types))
+
+    for idx, eheadersandtypes in enumerate(headersandtypes):
+        print('enumerate headersandtypes', idx, eheadersandtypes)
 
     # make the list of headers and types into a dictionary object
     # dheadersandtypes = dict(headersandtypes)
@@ -320,10 +307,6 @@ def updatecolumnheader(events, window):
 
 # Guess the column types based on the first 100 rows
 def _guess_types(reader, number_of_columns, max_sample_size=100):
-    '''Guess column types (as for SQLite) of CSV.
-
-    :param fileobj: read-only file object for a CSV file.
-    '''
     # we default to text for each field
     types = ['text'] * number_of_columns
     # order matters
@@ -391,6 +374,7 @@ def _guess_types(reader, number_of_columns, max_sample_size=100):
         if have_max_samples:
             break
 
+    # sg.Popup('enumerate(results) =>', list(enumerate(results)))
     for column,colresult in enumerate(results):
         for _type, _ in options:
             if colresult[_type] > 0 and colresult[_type] >= colresult[types[column]]:
@@ -426,30 +410,7 @@ mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue), 
         [sg.Text('Message Area', size=(120,1),key='_MESSAGEAREA_')],
         [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='''
-Convert a CSV file to a table in a SQLite database.
-The database is created if it does not yet exist.
-''')
-    # parser commented out. will use a window to get input from the user
-    #
-    # parser.add_argument('csv_file', type=str, help='Input CSV file path')
-    # parser.add_argument('sqlite_db_file', type=str, help='Output SQLite file')
-    # parser.add_argument('table_name', type=str, nargs='?', help='Name of table to write to in SQLite file', default='data')
-    # parser.add_argument('--headers', type=str, nargs='?', help='Headers are read from this file, if provided.', default=None)
-    # parser.add_argument('--types', type=list, nargs='?', help='Types are read from this file, if provided.', default=None)
-
-    # group = parser.add_mutually_exclusive_group()
-    # group.add_argument('--bz2', help='Input csv file is compressed using bzip2.', action='store_true')
-    # group.add_argument('--gzip', help='Input csv file is compressed using gzip.', action='store_true')
-
-    # args = parser.parse_args()
-
-    compression = None
-    # if args.bz2:
-    #     compression = 'bz2'
-    # elif args.gzip:
-    #     compression = 'gzip'
+# if __name__ == '__main__':
 
 # ########################################
 # get the file names
