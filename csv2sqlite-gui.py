@@ -61,24 +61,17 @@ def create_connection(my_db_file):
 def fill_csv_listbox(window, values):
 # #################################
     csvdata = []
+    indx = 0
+
     csvfilename = values['_CSVFILENAME_']
     with open(csvfilename, newline='') as f:
         # reader = csv.reader(f)
-        # printing first 5 rows 
-        # print('\nFirst 5 rows are:\n') 
-        # for row in rows[:5]: 
-            # parsing each column of a row 
-            # for col in row: 
-            # print("%10s"%col), 
-        # print('\n') 
+        # creating a csv reader object
+        csvreader = csv.reader(f)
 
-        for indx in range(19):
-            therow = csv.reader(f.readline())
-            csvdata += therow
-            if indx < 3:
-                print('therow is: ', type(therow))
-                print('csvdata is: ', type(csvdata))
-                print('csvdata=>', csvdata)
+        # extracting each data row one by one
+        for row in csvreader:
+            csvdata.append(row)
 
     window.FindElement('_CSVROWS_').Update(csvdata)
 
