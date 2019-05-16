@@ -61,6 +61,7 @@ def create_connection(my_db_file):
 def fill_csv_listbox(window, values):
 # #################################
     csvdata = []
+    thisrow = []
     indx = 0
 
     csvfilename = values['_CSVFILENAME_']
@@ -71,9 +72,12 @@ def fill_csv_listbox(window, values):
 
         # extracting each data row one by one
         for row in csvreader:
-            csvdata.append(row)
+            for col in range(len(row)):
+                thisrow.append(row[col])
+            csvdata.append(thisrow)
 
     window.FindElement('_CSVROWS_').Update(csvdata)
+    # print('csvdata=>', csvdata)
 
 
 def fill_db_listbox(window, values, con):
