@@ -285,7 +285,9 @@ def getcsvfilename(defaultfilename):
     if not os.path.isfile(csvfilename):
         sg.Popup('No CSV File Found - exiting program', csvfilename,keep_on_top=True)
         sys.exit(1)
-    return csvfilename
+    # Just in case the filename entered contained a space - change any spaces to underscores
+    thecsvfilename = (csvfilename.replace(' ', '_'))
+    return thecsvfilename
 
 
 def getdbfilename(defaultfilename):
@@ -295,7 +297,9 @@ def getdbfilename(defaultfilename):
     if not os.path.isfile(dbfilename):
         sg.Popup('No database File Found - a new file will be created', dbfilename,keep_on_top=True)
         # sys.exit(1)
-    return dbfilename
+    # Just in case the filename entered contained a space - change any spaces to underscores
+    thedbfilename = (dbfilename.replace(' ', '_'))
+    return thedbfilename
 
 def gettablename(defaulttablename):
     tablename = sg.PopupGetText('Please enter a table name',default_text=defaulttablename,keep_on_top=True)
