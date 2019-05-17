@@ -61,23 +61,17 @@ def create_connection(my_db_file):
 def fill_csv_listbox(window, values):
 # #################################
     csvdata = []
-    thisrow = []
-    indx = 0
 
     csvfilename = values['_CSVFILENAME_']
     with open(csvfilename, newline='') as f:
-        # reader = csv.reader(f)
         # creating a csv reader object
         csvreader = csv.reader(f)
+        # skip 1st line with headings
+        next(csvreader, None)  # skip the first row
+        # load all remaining rows into a local list
+        csvdata = [row for row in csvreader]
 
-        # extracting each data row one by one
-        for row in csvreader:
-            for col in range(len(row)):
-                thisrow.append(row[col])
-            csvdata.append(thisrow)
-
-    window.FindElement('_CSVROWS_').Update(csvdata)
-    # print('csvdata=>', csvdata)
+    window.FindElement('_CSVROWS_').Update(csvdata[:][0])
 
 
 def fill_db_listbox(window, values, con):
@@ -85,7 +79,8 @@ def fill_db_listbox(window, values, con):
     dbdata = []
     cur = con.cursor()
     tablename = values['_TABLENAME_']
-    cur.execute('SELECT * FROM %s LIMIT 20;' % tablename)
+    cur.execute('SELECT * FROM %s LIMIT 1;' % tablename)
+
     dbdata = cur.fetchall()
     window.FindElement('_DBTABLEROWS_').Update(dbdata)
 
@@ -304,7 +299,8 @@ def getdbfilename(defaultfilename):
 
 def gettablename(defaulttablename):
     tablename = sg.PopupGetText('Please enter a table name',default_text=defaulttablename,keep_on_top=True)
-    return tablename
+    thetablename = (tablename.replace(' ', '_'))
+    return thetablename
 	
 
 def updatecolumnheader(events, window):
