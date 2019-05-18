@@ -102,14 +102,8 @@ def open_csv_file(filepath_or_fileobj):
                 fo = bz2.BZ2File(filepath_or_fileobj, mode='r')
         elif compression == 'gzip':
             fo = gzip.open(filepath_or_fileobj, mode=read_mode)
-    else:
-        fo = filepath_or_fileobj
-    return(fo)
+    return fo
 
-
-def close_csv_file(filepointer):
-    fo=filepointer
-    fo.close
 
 def get_csv_headers(fo, dialect, events, window, headerspath_or_fileobj=None):
     # sg.Popup('get_csv_headers')
@@ -363,9 +357,6 @@ def _guess_types(reader, number_of_columns, max_sample_size=100):
                if cell.count('E') == 0:
                   cell = cell + "E0"
 
-            # if column == 18 or column == 17:
-               # print('column[17,18]', cell)
-
             for data_type,cast in options:
                 try:
                     cast(cell)
@@ -398,18 +389,18 @@ mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justifica
             [sg.Text('Database File Name', justification='right', size=(20, 1)), sg.InputText(key='_DBFILENAME_', size=(80, 1))],
             [sg.Text('Table Name', justification='right', size=(20,1)), sg.InputText(key='_TABLENAME_', size=(80, 1))],
             [sg.Button('Check Filenames', key='_BUTTON-CHECK-FILENAMES_', disabled=False)]]
-			
+
 
 mainscreencolumn2 = [[sg.Listbox(values='', size=(25, 20), key='_HEADERS_', enable_events=True), sg.Listbox(values='', size=(25, 20), key='_TYPES_')]]
 
 
 mainscreencolumn3 = [[sg.Multiline(size=(100, 10), key='_CSVROWS_',autoscroll=False)],
-			[sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
+            [sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
             [sg.Multiline(size=(100, 10), key='_DBTABLEROWS_',autoscroll=False)]]
 
 mainscreencolumn4 = [[sg.Text('Column Heading', size=(15, 1), justification='right'), sg.InputText(key='_HEADERCHANGE_', size=(30, 1))],
-                     [sg.Text('Column Type', size=(15, 1) ,justification='right'), sg.InputText(key='_COLUMNTYPECHANGE_', size=(30, 1))],
-					 [sg.Button('Update', key='_UPDATECOLUMNHEADING_')]]
+                    [sg.Text('Column Type', size=(15, 1) ,justification='right'), sg.InputText(key='_COLUMNTYPECHANGE_', size=(30, 1))],
+                    [sg.Button('Update', key='_UPDATECOLUMNHEADING_')]]
 
 mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue), sg.Column(mainscreencolumn4)],
         [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1))],
