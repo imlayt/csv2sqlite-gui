@@ -30,6 +30,9 @@ dialect = ''
 header_given = ''
 types = []
 compression = None
+mycsvfilename = 'Enter CSV filename or click Browse'
+mydbfilename = 'Enter datbase filename or click Browse'
+mytablename = 'Enter tablename to be created'
 
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
@@ -294,7 +297,6 @@ def fillheadersandtypes(filepath_or_fileobj, window):
 
     fo = open_csv_file(filepath_or_fileobj)
     try:
-        # sg.Popup('fo =>', fo)
         dialect = csv.Sniffer().sniff(fo.readline())
     except TypeError:
         dialect = csv.Sniffer().sniff(str(fo.readline()))
@@ -310,39 +312,33 @@ def fillheadersandtypes(filepath_or_fileobj, window):
     headersandtypes = list(zip(headers, types))
 
     # fill the headers listbox
-    window.FindElement('_HEADERS_').Update(headersandtypes)
-    window.Refresh()
+    # window.FindElement('_HEADERS_').Update(headersandtypes)
+    # window.Refresh()
     return fo
 
 
 def getcsvfilename(defaultfilename):
-    if not os.path.isfile(defaultfilename):
-        csvfilename = sg.PopupGetFile('Please enter a CSV file name',
+    csvfilename = sg.PopupGetFile('Please enter a CSV file name',
                 default_path=defaultfilename, keep_on_top=True, file_types=(("CSV Files", "*.csv"),))
     if not os.path.isfile(csvfilename):
         sg.Popup('No CSV File Found - exiting program', csvfilename, keep_on_top=True)
         sys.exit(1)
-    # Just in case the filename entered contained a space - change any spaces to underscores
-    thecsvfilename = (csvfilename.replace(' ', '_'))
-    return thecsvfilename
+    return csvfilename
 
 
 def getdbfilename(defaultfilename):
-    if not os.path.isfile(defaultfilename):
-        dbfilename = sg.PopupGetFile('Please enter a database file name',
+    dbfilename = sg.PopupGetFile('Please enter a database file name',
                 default_path=defaultfilename, keep_on_top=True, file_types=(("Sqlite Files", "*.db"),))
     if not os.path.isfile(dbfilename):
         sg.Popup('No database File Found - a new file will be created', dbfilename, keep_on_top=True)
-        # sys.exit(1)
-    # Just in case the filename entered contained a space - change any spaces to underscores
-    thedbfilename = (dbfilename.replace(' ', '_'))
-    return thedbfilename
+    return dbfilename
 
 
 def gettablename(defaulttablename):
     tablename = sg.PopupGetText('Please enter a table name', default_text=defaulttablename, keep_on_top=True)
     thetablename = (tablename.replace(' ', '_'))
-    return thetablename
+    tablename = (thetablename.replace('-', '_')) # '-' throws an exception when creating a table
+    return tablename
 
 
 def updatecolumnheader(events, window):
@@ -361,33 +357,23 @@ mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justifica
                       sg.InputText(key='_TABLENAME_', size=(78, 1))],
                      [sg.Button('Check Filenames', key='_BUTTON-CHECK-FILENAMES_', disabled=False)]]
 
-mainscreencolumn2 = [[sg.Listbox(values='', size=(25, 20), key='_HEADERS_', enable_events=True),
-                      sg.Listbox(values='', size=(25, 20), key='_TYPES_')]]
-
-mainscreencolumn3 = [[sg.Multiline(size=(100, 10), key='_CSVROWS_', autoscroll=False)],
+mainscreencolumn3 = [[sg.Multiline(size=(100, 2), key='_CSVROWS_', autoscroll=False)],
                      [sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-                     [sg.Multiline(size=(100, 10), key='_DBTABLEROWS_', autoscroll=False)]]
+                     [sg.Multiline(size=(100, 2), key='_DBTABLEROWS_', autoscroll=False)]]
 
-mainscreencolumn4 = [[sg.Text('Column Heading', size=(15, 1), justification='right'),
-                      sg.InputText(key='_HEADERCHANGE_', size=(30, 1))],
-                     [sg.Text('Column Type', size=(15, 1), justification='right'),
-                      sg.InputText(key='_COLUMNTYPECHANGE_', size=(30, 1))],
-                     [sg.Button('Update', key='_UPDATECOLUMNHEADING_')]]
-
-mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue), sg.Column(mainscreencolumn4)],
+mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
                     [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1))],
-                    [sg.Column(mainscreencolumn3, background_color=lightblue),
-                     sg.Column(mainscreencolumn2, background_color=lightblue)],
-                    [sg.Text('Message Area', size=(120, 1), key='_MESSAGEAREA_')],
+                    [sg.Column(mainscreencolumn3, background_color=lightblue)],
+                    [sg.Text('Message Area', size=(100, 1), key='_MESSAGEAREA_')],
                     [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
 
 # if __name__ == '__main__':
 
 # ########################################
 # get the file names
-thecsvfile = getcsvfilename('mycsvfilename')
-thedbfile = getdbfilename('mydbfilename')
-thetablename = gettablename('mytablename')
+thecsvfile = getcsvfilename(mycsvfilename)
+thedbfile = getdbfilename(mydbfilename)
+thetablename = gettablename(mytablename)
 
 # ########################################
 # initialize main screen window
@@ -416,11 +402,14 @@ while True:  # Event Loop
             fill_db_listbox(window, values, con)
         else:
             write_to_message_area(window, 'FAIL - File NOT converted')
-    elif event == '_HEADERS_':
-        aheader, atype = values['_HEADERS_'][0]
-        window.FindElement('_HEADERCHANGE_').Update(aheader)
-        window.FindElement('_COLUMNTYPECHANGE_').Update(atype)
-    elif event == '_UPDATECOLUMNHEADING_':
-        updatecolumnheader(values, window)
     elif event == '_BUTTON-CHECK-FILENAMES_':
-        sg.Popup('_BUTTON-CHECK-FILENAMES_', keep_on_top=True)
+        # ########################################
+        # get the file names
+        thecsvfile = getcsvfilename(values['_CSVFILENAME_'])
+        thedbfile = getdbfilename(values['_DBFILENAME_'])
+        thetablename = gettablename(values['_TABLENAME_'])
+
+        window.FindElement('_CSVFILENAME_').Update(thecsvfile)
+        window.FindElement('_DBFILENAME_').Update(thedbfile)
+        window.FindElement('_TABLENAME_').Update(thetablename)
+        window.Refresh()
