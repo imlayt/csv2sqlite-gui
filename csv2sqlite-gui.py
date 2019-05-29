@@ -30,9 +30,9 @@ dialect = ''
 header_given = ''
 types = []
 compression = None
-mycsvfilename = 'Enter CSV filename or click Browse'
-mydbfilename = 'Enter datbase filename or click Browse'
-mytablename = 'Enter tablename to be created'
+mycsvfilename = 'CSV filename'
+mydbfilename = 'datbase'
+mytablename = 'tablename'
 
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
@@ -72,6 +72,7 @@ def fill_csv_listbox(window, values):
         next(csvreader, None)  # skip the first row
         # load all remaining rows into a local list
         csvdata = [row for row in csvreader]
+        # print('csvdata=>', csvdata)
 
     window.FindElement('_CSVROWS_').Update(csvdata[:][0])
 
@@ -111,6 +112,7 @@ def get_csv_headers(fo, dialect, events, window):
     # get the headers
     reader = csv.reader(fo, dialect)
     headers = [header.strip() for header in next(reader)]
+    # print('headers=>', headers)
     fo.seek(0)
 
     # replace spaces in the column names with '_'
@@ -231,8 +233,7 @@ def convert(filepath_or_fileobj, dbpath, table, events, window):
     fo = fillheadersandtypes(filepath_or_fileobj, window)
 
     # now load data
-    _columns = ','.join(['"%s" %s' % (header, _type) for (header, _type) in headersandtypes]
-    )
+    _columns = ','.join(['"%s" %s' % (header, _type) for (header, _type) in headersandtypes])
 
     # sg.Popup('_columns=', _columns,keep_on_top=True)
     reader = csv.reader(fo, dialect)
@@ -317,20 +318,24 @@ def fillheadersandtypes(filepath_or_fileobj, window):
     return fo
 
 
-def getcsvfilename(defaultfilename):
+def getcsvfilename(defaultfilename, window):
     csvfilename = sg.PopupGetFile('Please enter a CSV file name',
                 default_path=defaultfilename, keep_on_top=True, file_types=(("CSV Files", "*.csv"),))
     if not os.path.isfile(csvfilename):
         sg.Popup('No CSV File Found - exiting program', csvfilename, keep_on_top=True)
         sys.exit(1)
+    window.FindElement('_CSVFILENAME_').Update(csvfilename)
     return csvfilename
 
 
-def getdbfilename(defaultfilename):
+def getdbfilename(defaultfilename, window, thecsvfile=None):
+    dbfilename = 'UNKNOWN'
     dbfilename = sg.PopupGetFile('Please enter a database file name',
                 default_path=defaultfilename, keep_on_top=True, file_types=(("Sqlite Files", "*.db"),))
-    if not os.path.isfile(dbfilename):
+    if not os.path.isfile(dbfilename) and thecsvfile is not None:
+        dbfilename = thecsvfile.replace('.csv', '.db')
         sg.Popup('No database File Found - a new file will be created', dbfilename, keep_on_top=True)
+
     return dbfilename
 
 
@@ -349,40 +354,42 @@ def updatecolumnheader(events, window):
 # define layouts
 # layout mainscreen window
 mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justification='center', size=(25, 1))],
-                     [sg.Text('CSV File Name', justification='right', size=(20, 1)),
-                      sg.InputText(key='_CSVFILENAME_', size=(78, 1), enable_events=True)],
-                     [sg.Text('Database File Name', justification='right', size=(20, 1)),
-                      sg.InputText(key='_DBFILENAME_', size=(78, 1))],
-                     [sg.Text('Table Name', justification='right', size=(20, 1)),
-                      sg.InputText(key='_TABLENAME_', size=(78, 1))],
-                     [sg.Button('Check Filenames', key='_BUTTON-CHECK-FILENAMES_', disabled=False)]]
+        [sg.Text('CSV File Name', justification='right', size=(20, 1)),
+        sg.InputText(key='_CSVFILENAME_', size=(78, 1), enable_events=True), sg.FileBrowse(file_types=(('CSV Files', '*.csv'),))],
+        [sg.Text('Database File Name', justification='right', size=(20, 1)),
+        sg.InputText(key='_DBFILENAME_', size=(78, 1)), sg.FileBrowse(file_types=(("Sqlite files", "*.db"),))],
+        [sg.Text('Table Name', justification='right', size=(20, 1)),
+        sg.InputText(key='_TABLENAME_', size=(78, 1))],
+        [sg.Button('Check Filenames', key='_BUTTON-CHECK-FILENAMES_', disabled=False)]]
 
-mainscreencolumn3 = [[sg.Multiline(size=(100, 2), key='_CSVROWS_', autoscroll=False)],
-                     [sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-                     [sg.Multiline(size=(100, 2), key='_DBTABLEROWS_', autoscroll=False)]]
+mainscreencolumn3 = [[sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1))],
+        [sg.Multiline(size=(100, 2), key='_CSVROWS_', autoscroll=False)],
+        [sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
+        [sg.Multiline(size=(100, 2), key='_DBTABLEROWS_', autoscroll=False)]]
 
 mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
-                    [sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1))],
-                    [sg.Column(mainscreencolumn3, background_color=lightblue)],
-                    [sg.Text('Message Area', size=(100, 1), key='_MESSAGEAREA_')],
-                    [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
+        [sg.Column(mainscreencolumn3, background_color=lightblue)],
+        [sg.Text('Message Area', size=(100, 1), key='_MESSAGEAREA_')],
+        [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
 
 # if __name__ == '__main__':
-
-# ########################################
-# get the file names
-thecsvfile = getcsvfilename(mycsvfilename)
-thedbfile = getdbfilename(mydbfilename)
-thetablename = gettablename(mytablename)
-
 # ########################################
 # initialize main screen window
 window = sg.Window('CSV2Sqlite-GUI', background_color=mediumblue2, default_element_size=(20, 1)).Layout(mainscreenlayout)
 window.Finalize()
 
+# ########################################
+# get the file names
+thecsvfile = getcsvfilename(mycsvfilename, window)
+# print('thecsvfile=>', thecsvfile)
+thedbfile = getdbfilename(mydbfilename, window, thecsvfile)
+thetablename = gettablename(mytablename)
+
+
+
 # ###############################
 # get filenames
-window.FindElement('_CSVFILENAME_').Update(thecsvfile)
+
 window.FindElement('_DBFILENAME_').Update(thedbfile)
 window.FindElement('_TABLENAME_').Update(thetablename)
 window.Refresh()
@@ -405,8 +412,8 @@ while True:  # Event Loop
     elif event == '_BUTTON-CHECK-FILENAMES_':
         # ########################################
         # get the file names
-        thecsvfile = getcsvfilename(values['_CSVFILENAME_'])
-        thedbfile = getdbfilename(values['_DBFILENAME_'])
+        thecsvfile = getcsvfilename(values['_CSVFILENAME_'], window)
+        thedbfile = getdbfilename(values['_DBFILENAME_'], window)
         thetablename = gettablename(values['_TABLENAME_'])
 
         window.FindElement('_CSVFILENAME_').Update(thecsvfile)
