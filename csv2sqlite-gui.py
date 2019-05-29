@@ -33,6 +33,7 @@ compression = None
 mycsvfilename = 'CSV filename'
 mydbfilename = 'datbase'
 mytablename = 'tablename'
+thedbfile = ''
 
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
@@ -380,18 +381,18 @@ window.Finalize()
 
 # ########################################
 # get the file names
-thecsvfile = getcsvfilename(mycsvfilename, window)
+# thecsvfile = getcsvfilename(mycsvfilename, window)
 # print('thecsvfile=>', thecsvfile)
-thedbfile = getdbfilename(mydbfilename, window, thecsvfile)
-thetablename = gettablename(mytablename)
+# thedbfile = getdbfilename(mydbfilename, window, thecsvfile)
+# thetablename = gettablename(mytablename)
 
 
 
 # ###############################
 # get filenames
 
-window.FindElement('_DBFILENAME_').Update(thedbfile)
-window.FindElement('_TABLENAME_').Update(thetablename)
+# window.FindElement('_DBFILENAME_').Update(thedbfile)
+# window.FindElement('_TABLENAME_').Update(thetablename)
 window.Refresh()
 
 # event loop
@@ -402,6 +403,7 @@ while True:  # Event Loop
         sys.exit(1)
     elif event == '_CONVERT_':
         write_to_message_area(window, 'Converting the file')
+        thedbfile = values['_DBFILENAME_']
         converttf = convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
         if converttf:
             write_to_message_area(window, 'SUCCESS - File converted')
