@@ -25,33 +25,46 @@ def getrootdirectory(defaultfilename, window):
     return rootdirectory
 
 # pass in the root folder and a file object for saving the output. The file is overwritten with each run.
-def recursive_walk(folder, fo):
+def recursive_walk(folder, fo, includefiles=None):
     for folderName, subfolders, filenames in os.walk(folder):
         if subfolders:
             for subfolder in subfolders:
                 recursive_walk(subfolder, fo)
         # print to stdout which is redirected to the Output element in the UI
-        print(folderName + '/')
-        window.Refresh()
-        # print to a text file
-        print(folderName + '/', file=fo)
-        for filename in filenames:
-            print('.' * len(folderName) + '/' + filename)
-            print('.' * len(folderName) + '/' + filename, file=fo)
+
+        if includefiles:
+            for filename in filenames:
+                # print('.' * len(folderName) + '/' + filename)
+                print('"%s","%s"' % (folderName, filename))
+                # print('"%s"' % word)
+                if fo is not None:
+                    # print('.' * len(folderName) + '/' + filename, file=fo)
+                    # print(folderName, ' , ', filename, file=fo)
+                    print('"%s","%s"' % (folderName, filename), file=fo)
+        else:
+            print(folderName + '/')
+            window.Refresh()
+            # print to a text file
+            if fo is not None:
+                print(folderName + '/', file=fo)
+
 
 # define layouts
-mainscreencolumn1 = [[sg.Text('Root Directory', background_color=lightblue, justification='center', size=(25, 1))],
+mainscreencolumn1 = [[sg.Radio('Directories only', "RADIO1", default=True, key='_DONLY_', size=(20, 1)),
+         sg.Radio('Include files', "RADIO1", key='_INCLFILES_', size=(20, 1))],
+        [sg.Radio('Display only', "RADIO2", default=True, key='_DISPONLY_', size=(20, 1)),
+         sg.Radio('Save to output file', "RADIO2", key='_SAVE2FILE_', size=(20, 1))],
         [sg.Text('Root Folder', justification='right', size=(20, 1)),
-        sg.InputText(key='_ROOTDIRECTORY_', size=(78, 1), enable_events=True), sg.FolderBrowse()],
+        sg.InputText(key='_ROOTDIRECTORY_', size=(77, 1), enable_events=True), sg.FolderBrowse()],
         [sg.Text('Output File', justification='right', size=(20, 1)),
-         sg.InputText(key='_OUTPUTFILE_', size=(78, 1), enable_events=True), sg.FileBrowse()]
+         sg.InputText(key='_OUTPUTFILE_', size=(77, 1), enable_events=True), sg.FileBrowse()]
         ]
 
 # layout mainscreen window
 mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
-        [sg.Output(size=(110, 20), key='_OUTPUT_', font='courier 8')],
+        [sg.Output(size=(112, 20), key='_OUTPUT_', font='courier 8')],
         [sg.Text('Message Area', size=(100, 1), key='_MESSAGEAREA_')],
-        [sg.Button('Recurse', key='_RECURSE_'), sg.Exit()]]
+        [sg.Button('Walk the Directory', key='_WALKDIR_'), sg.Exit()]]
 
 # if __name__ == '__main__':
 # ########################################
@@ -66,7 +79,7 @@ while True:  # Event Loop
     event, values = window.Read()
     if event is None or event=="Exit":
         sys.exit(1)
-    elif event=='_RECURSE_':
+    elif event=='_WALKDIR_':
         # ########################################
         # get the root folder
         if len(values['_ROOTDIRECTORY_']) == 0:
@@ -79,11 +92,26 @@ while True:  # Event Loop
         window.FindElement('_ROOTDIRECTORY_').Update(therootdir)
         window.FindElement('_OUTPUT_').Update('')
         write_to_message_area(window, 'Show the directories')
-        fo = open(values['_OUTPUTFILE_'], 'w')
-        # fo = open('/Users/imlay/Downloads/directorylist.txt', 'w')
-        recursive_walk(therootdir, fo)
-        fo.close()
-        write_to_message_area(window, 'Directory recursion complete')
+
+        if values['_DONLY_']:
+            if values['_SAVE2FILE_']:
+                # sg.Popup('Directories only', keep_on_top=True)
+                fo = open(values['_OUTPUTFILE_'], 'w')
+                print('"%s"' % ('Directoryname'), file=fo)
+                recursive_walk(therootdir, fo, False)
+                fo.close()
+            else:   #don't save to a file
+                recursive_walk(therootdir, None, False)
+        else:   # include files
+            if values['_SAVE2FILE_']:
+                fo = open(values['_OUTPUTFILE_'], 'w')
+                print('"%s","%s"' % ('Directoryname', 'Filename'), file=fo)
+                recursive_walk(therootdir, fo, True)
+                fo.close()
+            else:   # don't save to a file
+                recursive_walk(therootdir, None, True)
+
+        write_to_message_area(window, 'Directory walk complete')
 # recursive_walk('/name/of/folder')
 
 
