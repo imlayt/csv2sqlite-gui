@@ -33,6 +33,7 @@ compression = None
 mycsvfilename = 'CSV filename'
 mydbfilename = 'datbase'
 mytablename = 'tablename'
+thedbfile = ''
 
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
@@ -380,28 +381,29 @@ window.Finalize()
 
 # ########################################
 # get the file names
-thecsvfile = getcsvfilename(mycsvfilename, window)
+# thecsvfile = getcsvfilename(mycsvfilename, window)
 # print('thecsvfile=>', thecsvfile)
-thedbfile = getdbfilename(mydbfilename, window, thecsvfile)
-thetablename = gettablename(mytablename)
+# thedbfile = getdbfilename(mydbfilename, window, thecsvfile)
+# thetablename = gettablename(mytablename)
 
 
 
 # ###############################
 # get filenames
 
-window.FindElement('_DBFILENAME_').Update(thedbfile)
-window.FindElement('_TABLENAME_').Update(thetablename)
+# window.FindElement('_DBFILENAME_').Update(thedbfile)
+# window.FindElement('_TABLENAME_').Update(thetablename)
 window.Refresh()
 
 # event loop
 while True:  # Event Loop
     event, values = window.Read()
-    fill_csv_listbox(window, values)
     if event is None or event == "Exit":
         sys.exit(1)
     elif event == '_CONVERT_':
         write_to_message_area(window, 'Converting the file')
+        fill_csv_listbox(window, values)
+        thedbfile = values['_DBFILENAME_']
         converttf = convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
         if converttf:
             write_to_message_area(window, 'SUCCESS - File converted')
@@ -412,11 +414,35 @@ while True:  # Event Loop
     elif event == '_BUTTON-CHECK-FILENAMES_':
         # ########################################
         # get the file names
-        thecsvfile = getcsvfilename(values['_CSVFILENAME_'], window)
-        thedbfile = getdbfilename(values['_DBFILENAME_'], window)
-        thetablename = gettablename(values['_TABLENAME_'])
-
+        if len(values['_CSVFILENAME_']) == 0:
+            thecsvfile = getcsvfilename(values['_CSVFILENAME_'], window)
+        elif os.path.isfile(values['_CSVFILENAME_']):
+            write_to_message_area(window, 'CSV file exists')
+            thecsvfile = values['_CSVFILENAME_']
+        else:
+            thecsvfile = getcsvfilename(values['_CSVFILENAME_'], window)
         window.FindElement('_CSVFILENAME_').Update(thecsvfile)
+                
+        if len(values['_DBFILENAME_']) == 0:
+            thedbfile = getdbfilenamefilename(values['_DBFILENAME_'], window)
+        elif os.path.isfile(values['_DBFILENAME_']):
+            write_to_message_area(window, 'Database file exists')
+            thedbfile = values['_DBFILENAME_']
+        else:
+            thedbfile = getcsvfilename(values['_DBFILENAME_'], window)
         window.FindElement('_DBFILENAME_').Update(thedbfile)
+        
+        if len(values['_TABLENAME_']) == 0:
+            thetablename = gettablename(values['_TABLENAME_'], window)
+        elif not tableexists(con, values['_TABLENAME_']):
+            write_to_message_area(window, 'Table does not exist')
+            thetablename = values['_TABLENAME_']
+        else:
+            thetablename = getcsvfilename(values['_TABLENAME_'], window)
         window.FindElement('_TABLENAME_').Update(thetablename)
+       
+        # window.FindElement('_TABLENAME_').Update(thecsvfile)
+        # window.FindElement('_DBFILENAME_').Update(thedbfile)
+        # window.FindElement('_TABLENAME_').Update(thetablename)
         window.Refresh()
+        
