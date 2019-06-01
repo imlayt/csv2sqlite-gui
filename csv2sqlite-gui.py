@@ -259,6 +259,7 @@ def convert(filepath_or_fileobj, dbpath, table, events, window):
     else:
         _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headersandtypes)))
 
+# sdfgvb
         line = 0
         for row in reader:
             line += 1
