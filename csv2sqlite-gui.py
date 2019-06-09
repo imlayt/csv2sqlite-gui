@@ -44,6 +44,39 @@ else:
 csvdata = []
 
 
+def table_example(csvfilename):
+    # filename = sg.PopupGetFile('filename to open', no_window=True, file_types=(("CSV Files","*.csv"),))
+    # --- populate table with file contents --- #
+    if csvfilename=='':
+        sys.exit(69)
+    data = []
+    header_list = []
+    if csvfilename is not None:
+        with open(csvfilename, "r") as infile:
+            reader = csv.reader(infile)
+            header_list = next(reader)
+            try:
+                data = list(reader)  # read everything else into a list of rows
+                # if button == 'No':
+                #     header_list = ['column' + str(x) for x in range(len(data[0]))]
+            except:
+                sg.PopupError('Error reading file')
+                sys.exit(69)
+    sg.SetOptions(element_padding=(0, 0))
+
+    layout = [[sg.Table(values=data,
+            headings=header_list,
+            max_col_width=20,
+            auto_size_columns=True,
+            justification='left',
+            display_row_numbers='true',
+            alternating_row_color='lightblue',
+            num_rows=min(len(data), 5))]]
+
+    tablewindow = sg.Window('Table', grab_anywhere=False, keep_on_top=True).Layout(layout)
+    event, values = tablewindow.Read()
+
+
 # create a database connection to a SQLite database
 def create_connection(my_db_file):
     if not os.path.isfile(my_db_file):
@@ -70,10 +103,14 @@ def fill_csv_listbox(window, values):
     with open(csvfilename, newline='') as f:
         # creating a csv reader object
         csvreader = csv.reader(f)
+
         # skip 1st line with headings
         next(csvreader, None)  # skip the first row
+
         # load all remaining rows into a local list
+        # csvdata = [list(row) for row in csvreader]
         csvdata = [row for row in csvreader]
+
         # print('csvdata=>', csvdata)
 
     window.FindElement('_CSVROWS_').Update(csvdata[:][0])
@@ -81,12 +118,12 @@ def fill_csv_listbox(window, values):
 
 def fill_db_listbox(window, values, con):
     # #################################
-    dbdata = []
     cur = con.cursor()
     tablename = values['_TABLENAME_']
     cur.execute('SELECT * FROM %s LIMIT 1;' % tablename)
 
     dbdata = cur.fetchall()
+
     window.FindElement('_DBTABLEROWS_').Update(dbdata)
 
 
@@ -202,16 +239,12 @@ def get_csv_types(fo, window, headers, dialect):
             if colresult[_type] > 0 and colresult[_type] >= colresult[types[column]]:
                 types[column] = _type
 
-    # return types
-
-
     fo.seek(0)
     return types
 
 
 def tableexists(con, tablename):
     # returns True if the table already exists and False if noe
-    # sg.Popup('table=>', tablename)
     sql2 = "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%s' ;" % tablename
 
     cur = con.cursor()
@@ -314,10 +347,6 @@ def fillheadersandtypes(filepath_or_fileobj, window):
 
     # combine headers and types into space separated values
     headersandtypes = list(zip(headers, types))
-
-    # fill the headers listbox
-    # window.FindElement('_HEADERS_').Update(headersandtypes)
-    # window.Refresh()
     return fo
 
 
@@ -371,30 +400,15 @@ mainscreencolumn3 = [[sg.Text('CSV File', background_color=mediumblue, justifica
         [sg.Multiline(size=(100, 2), key='_DBTABLEROWS_', autoscroll=False)]]
 
 mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
-        [sg.Column(mainscreencolumn3, background_color=lightblue)],
-        [sg.Text('Message Area', size=(100, 1), key='_MESSAGEAREA_')],
-        [sg.Button('Convert', key='_CONVERT_'), sg.Exit()]]
+                    [sg.Column(mainscreencolumn3, background_color=lightblue)],
+                    [sg.Text('Message Area', size=(100, 1), key='_MESSAGEAREA_')],
+                    [sg.Button('Convert', key='_CONVERT_'), sg.Exit(), sg.Button('Table Demo', key='_TABLEDEMO_')]]
 
 # if __name__ == '__main__':
 # ########################################
 # initialize main screen window
 window = sg.Window('CSV2Sqlite-GUI', background_color=mediumblue2, default_element_size=(20, 1)).Layout(mainscreenlayout)
 window.Finalize()
-
-# ########################################
-# get the file names
-# thecsvfile = getcsvfilename(mycsvfilename, window)
-# print('thecsvfile=>', thecsvfile)
-# thedbfile = getdbfilename(mydbfilename, window, thecsvfile)
-# thetablename = gettablename(mytablename)
-
-
-
-# ###############################
-# get filenames
-
-# window.FindElement('_DBFILENAME_').Update(thedbfile)
-# window.FindElement('_TABLENAME_').Update(thetablename)
 window.Refresh()
 
 # event loop
@@ -434,17 +448,21 @@ while True:  # Event Loop
             thedbfile = values['_DBFILENAME_']
         else:
             filecheckok = False
-            sg.Popup(values['_DBFILENAME_'], 'not found')
+            sg.Popup(values['_DBFILENAME_'], 'not found - it will be created.')
 
-        if not len(values['_DBFILENAME_'])==0:
+        # if not len(values['_DBFILENAME_'])==0:
+        if filecheckok:
             con = create_connection(thedbfile)
             if len(values['_TABLENAME_'])==0:
                 sg.Popup('Enter a tablename')
                 filecheckok = False
             elif not tableexists(con, values['_TABLENAME_']):
-                write_to_message_area(window, 'Table does not exist')
+                write_to_message_area(window, 'Table does not exist - it will be created.')
                 thetablename = values['_TABLENAME_']
 
         window.Refresh()
         if filecheckok:
             sg.Popup('Filenames and Tablename check complete.')
+
+    elif event=='_TABLEDEMO_':
+        table_example(values['_CSVFILENAME_'])
