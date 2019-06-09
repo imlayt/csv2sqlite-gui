@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 import sys
-
-if sys.version_info[0] >= 3:
-    import PySimpleGUI as sg
-else:
-    import PySimpleGUI27 as sg
+import PySimpleGUI as sg
 import random
 import string
 
@@ -31,12 +27,14 @@ data = make_table(num_rows=15, num_cols=6)
 headings = [data[0][x] for x in range(len(data[0]))]
 
 layout = [[sg.Table(values=data[1:][:], headings=headings, max_col_width=25,
-                        auto_size_columns=True, display_row_numbers=True, justification='right', num_rows=20, alternating_row_color='lightblue', key='_table_')],
+        auto_size_columns=True, display_row_numbers=True, justification='right', num_rows=20,
+        alternating_row_color='lightblue', key='_table_')],
           [sg.Button('Read'), sg.Button('Double')],
-          [sg.T('Read = read which rows are selected')],[sg.T('Double = double the amount of data in the table')]]
+          [sg.T('Read = read which rows are selected')], [sg.T('Double = double the amount of data in the table')]]
 
 window = sg.Window('Table', grab_anywhere=False, resizable=True).Layout(layout)
 
+# #####################
 while True:
     event, values = window.Read()
     if event is None:

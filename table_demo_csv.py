@@ -34,8 +34,8 @@ def table_example():
             auto_size_columns=True,
             justification='left',
             display_row_numbers='true',
-            alternating_row_color='blue',
-            num_rows=min(len(data), 20))],
+            alternating_row_color='lightblue',
+            num_rows=min(len(data), 5))],
             [sg.Exit()]]
 
 

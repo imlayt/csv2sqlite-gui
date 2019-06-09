@@ -34,6 +34,7 @@ mycsvfilename = 'CSV filename'
 mydbfilename = 'datbase'
 mytablename = 'tablename'
 thedbfile = ''
+filecheckok = True
 
 # Set read mode based on Python version
 if sys.version_info[0] > 2:
@@ -413,37 +414,37 @@ while True:  # Event Loop
         else:
             write_to_message_area(window, 'FAIL - File NOT converted')
     elif event == '_BUTTON-CHECK-FILENAMES_':
-        # ########################################
-        # get the file names
+        filecheckok = True  # reset the flag to True
+        # check the file names
         if len(values['_CSVFILENAME_']) == 0:
-            thecsvfile = getcsvfilename(values['_CSVFILENAME_'], window)
+            sg.Popup('Enter a csv filename')
+            filecheckok = False
         elif os.path.isfile(values['_CSVFILENAME_']):
             write_to_message_area(window, 'CSV file exists')
             thecsvfile = values['_CSVFILENAME_']
         else:
-            thecsvfile = getcsvfilename(values['_CSVFILENAME_'], window)
-        window.FindElement('_CSVFILENAME_').Update(thecsvfile)
-                
+            filecheckok = False
+            sg.Popup(values['_CSVFILENAME_'], 'not found')
+
         if len(values['_DBFILENAME_']) == 0:
-            thedbfile = getdbfilenamefilename(values['_DBFILENAME_'], window)
+            sg.Popup('Enter a db filename')
+            filecheckok = False
         elif os.path.isfile(values['_DBFILENAME_']):
             write_to_message_area(window, 'Database file exists')
             thedbfile = values['_DBFILENAME_']
         else:
-            thedbfile = getcsvfilename(values['_DBFILENAME_'], window)
-        window.FindElement('_DBFILENAME_').Update(thedbfile)
-        
-        if len(values['_TABLENAME_']) == 0:
-            thetablename = gettablename(values['_TABLENAME_'], window)
-        elif not tableexists(con, values['_TABLENAME_']):
-            write_to_message_area(window, 'Table does not exist')
-            thetablename = values['_TABLENAME_']
-        else:
-            thetablename = getcsvfilename(values['_TABLENAME_'], window)
-        window.FindElement('_TABLENAME_').Update(thetablename)
-       
-        # window.FindElement('_TABLENAME_').Update(thecsvfile)
-        # window.FindElement('_DBFILENAME_').Update(thedbfile)
-        # window.FindElement('_TABLENAME_').Update(thetablename)
+            filecheckok = False
+            sg.Popup(values['_DBFILENAME_'], 'not found')
+
+        if not len(values['_DBFILENAME_'])==0:
+            con = create_connection(thedbfile)
+            if len(values['_TABLENAME_'])==0:
+                sg.Popup('Enter a tablename')
+                filecheckok = False
+            elif not tableexists(con, values['_TABLENAME_']):
+                write_to_message_area(window, 'Table does not exist')
+                thetablename = values['_TABLENAME_']
+
         window.Refresh()
-        
+        if filecheckok:
+            sg.Popup('Filenames and Tablename check complete.')
