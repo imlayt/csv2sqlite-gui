@@ -35,13 +35,8 @@ mydbfilename = 'datbase'
 mytablename = 'tablename'
 thedbfile = ''
 filecheckok = True
-
-# Set read mode based on Python version
-if sys.version_info[0] > 2:
-    read_mode = 'rt'
-else:
-    read_mode = 'rU'
 csvdata = []
+read_mode = 'rt'
 
 
 def table_example(csvfilename):
@@ -402,7 +397,8 @@ mainscreencolumn3 = [[sg.Text('CSV File', background_color=mediumblue, justifica
 mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
                     [sg.Column(mainscreencolumn3, background_color=lightblue)],
                     [sg.Text('Message Area', size=(100, 1), key='_MESSAGEAREA_')],
-                    [sg.Button('Convert', key='_CONVERT_'), sg.Exit(), sg.Button('Table Demo', key='_TABLEDEMO_')]]
+                    [sg.Button('Convert', key='_CONVERT_'), sg.Button('Preview CSV Data', key='_CSVPREVIEW_'),
+                     sg.Exit()]]
 
 # if __name__ == '__main__':
 # ########################################
@@ -464,5 +460,8 @@ while True:  # Event Loop
         if filecheckok:
             sg.Popup('Filenames and Tablename check complete.')
 
-    elif event=='_TABLEDEMO_':
-        table_example(values['_CSVFILENAME_'])
+    elif event=='_CSVPREVIEW_':
+        if os.path.isfile(values['_CSVFILENAME_']):
+            table_example(values['_CSVFILENAME_'])
+        else:
+            sg.Popup('CSV file not found.')
