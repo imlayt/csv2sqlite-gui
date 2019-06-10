@@ -36,6 +36,9 @@ mydbfilename = 'datbase'
 mytablename = 'tablename'
 thedbfile = ''
 filecheckok = True
+csvfilecheck = False
+dbfilecheck = False
+tablenamecheck = False
 csvdata = []
 read_mode = 'rt'
 
@@ -62,12 +65,12 @@ def table_example(csvfilename):
 
     layout = [[sg.Table(values=data,
             headings=header_list,
-            max_col_width=20,
+            max_col_width=min(round(250 / len(header_list)),10),
             auto_size_columns=True,
             justification='left',
             display_row_numbers='true',
             alternating_row_color='lightblue',
-            num_rows=min(len(data), 5))]]
+            num_rows=min(len(data), 10))]]
 
     tablewindow = sg.Window('Table', grab_anywhere=False, keep_on_top=True).Layout(layout)
     event, values = tablewindow.Read()
@@ -412,44 +415,50 @@ def validatedbfile(adbfile, values, window):
 
 
 def validatedbtable(atablename, adbfile, window):
-    con = create_connection(adbfile)
     if len(values['_TABLENAME_'])==0:
         sg.Popup('Enter a tablename')
         return False
-    elif not tableexists(con, values['_TABLENAME_']):
+    else:
+        con = create_connection(adbfile)
+        
+    if not tableexists(con, values['_TABLENAME_']):
         write_to_message_area(window, 'Table does not exist - it will be created.')
-        thetablename = values['_TABLENAME_']
+        # thetablename = values['_TABLENAME_']
         return True
 
 
 # define layouts
-# layout mainscreen window
 mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justification='center', size=(25, 1))],
-        [sg.Text('CSV File Name', justification='right', size=(20, 1)),
-         sg.InputText(key='_CSVFILENAME_', size=(114, 1), enable_events=True),
+        [sg.Text('CSV File Name', justification='right', size=(15, 1)),
+         sg.InputText(key='_CSVFILENAME_', size=(80, 1), enable_events=True),
          sg.FileBrowse(file_types=(('CSV Files', '*.csv'),))],
-        [sg.Text('Database File Name', justification='right', size=(20, 1)),
-         sg.InputText(key='_DBFILENAME_', size=(114, 1)), sg.FileBrowse(file_types=(("Sqlite files", "*.db"),))],
-        [sg.Text('Table Name', justification='right', size=(20, 1)),
-         sg.InputText(key='_TABLENAME_', size=(114, 1))],
+        [sg.Text('Database File Name', justification='right', size=(15, 1)),
+         sg.InputText(key='_DBFILENAME_', size=(80, 1)), sg.FileBrowse(file_types=(("Sqlite files", "*.db"),))],
+        [sg.Text('Table Name', justification='right', size=(15, 1)),
+         sg.InputText(key='_TABLENAME_', size=(80, 1))],
         [sg.Button('Check Filenames', key='_BUTTON-CHECK-FILENAMES_', disabled=False)]]
 
 mainscreencolumn3 = [[sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1))],
-        [sg.Multiline(size=(100, 2), key='_CSVROWS_', autoscroll=False)],
+        [sg.Multiline(size=(104, 2), key='_CSVROWS_', autoscroll=False)],
         [sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-        [sg.Multiline(size=(100, 2), key='_DBTABLEROWS_', autoscroll=False)]]
+        [sg.Multiline(size=(104, 2), key='_DBTABLEROWS_', autoscroll=False)]]
 
 mainscreencolumn4 = [[sg.Text('Headers / Types', background_color=mediumblue, justification='left', size=(30, 1))],
                      [sg.Listbox(values=headersandtypes, size=(37, 10), key='_HEADERSANDTYPES_')]]
+                     
+mainscreencolumn5 = [[sg.Text('Column Header', justification='left', size=(30, 1))],
+                    [sg.InputText(key='_COLHEADER_', size=(39, 1))],
+                    [sg.Text('Column Type', justification='left', size=(30, 1))],
+                    [sg.InputText(key='_COLTYPE_', size=(39, 1))]]                     
 
-mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
+# Define the mainscreen layout using the above layouts
+mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue),sg.Column(mainscreencolumn5, background_color=mediumblue)],
                     [sg.Column(mainscreencolumn3, background_color=lightblue), sg.Column(mainscreencolumn4)],
                     [sg.Text('Message Area', size=(131, 1), key='_MESSAGEAREA_')],
                     [sg.Button('Convert', key='_CONVERT_'), sg.Button('Preview CSV Data', key='_CSVPREVIEW_'),
                      sg.Exit()]]
 
 
-# if __name__ == '__main__':
 # ########################################
 # initialize main screen window
 sg.SetOptions(element_padding=(2, 2))
@@ -478,20 +487,26 @@ while True:  # Event Loop
 
     elif event == '_BUTTON-CHECK-FILENAMES_':
         filecheckok = True  # reset the flag to True
+        csvfilecheck = False  # reset the flag to False
+        dbfilecheck = False  # reset the flag to False
+        tablenamecheck = False  # reset the flag to False
         if validatecsvfile(values, window):
             thecsvfile = values['_CSVFILENAME_']
-            filecheckok = True
+            csvfilecheck = True
 
-        elif validatedbfile(values['_DBFILENAME_'], values, window):
+        if validatedbfile(values['_DBFILENAME_'], values, window):
             thedbfile = values['_DBFILENAME_']
-            filecheckok = True
+            dbfilecheck = True
 
-        elif validatedbtable(values['_DBTABLENAME_'], values['_DBFILENAME_'], window):
-            filecheckok = True
-        if filecheckok:
+        if validatedbtable(values['_TABLENAME_'], values['_DBFILENAME_'], window):
+            tablenamecheck = True
+            
+        if csvfilecheck:
             fo = fillheadersandtypes(thecsvfile, window)
             updatecolumnheader(event, window)
             window.Refresh()
+            
+        if csvfilecheck and dbfilecheck and tablenamecheck:
             sg.Popup('Filenames and Tablename check complete.')
 
     elif event=='_CSVPREVIEW_':
