@@ -80,7 +80,6 @@ def table_example(csvfilename):
     tablewindow = sg.Window('Table', grab_anywhere=False, keep_on_top=True).Layout(layout)
     event, values = tablewindow.Read()
 
-
 # create a database connection to a SQLite database
 def create_connection(my_db_file):
     if not os.path.isfile(my_db_file):
@@ -553,7 +552,9 @@ while True:  # Event Loop
 
     elif event=='_CSVPREVIEW_':
         if os.path.isfile(values['_CSVFILENAME_']):
+            window.Disappear()
             table_example(values['_CSVFILENAME_'])
+            window.Reappear()
         else:
             sg.Popup('CSV file not found.')
 
