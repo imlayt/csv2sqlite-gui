@@ -117,7 +117,8 @@ def fill_csv_listbox(window, values):
 
         # print('csvdata=>', csvdata)
 
-    window.FindElement('_CSVROWS_').Update(csvdata[:][0])
+        window.FindElement('_CSVROWS_').Update(csvdata[:][0])
+        window.Refresh()
 
 
 def fill_db_listbox(window, values, con):
@@ -271,7 +272,7 @@ def convert(filepath_or_fileobj, dbpath, table, events, window):
     # fill the headers and types list boxes - get file object back
     fo = fillheadersandtypes(filepath_or_fileobj, window)
 
-    # now load data
+    # now get columns headers and types
     _columns = ','.join(['"%s" %s' % (header, _type) for (header, _type) in headersandtypes])
 
     # sg.Popup('_columns=', _columns,keep_on_top=True)
@@ -430,6 +431,22 @@ def validatedbfile(adbfile, values, window):
         return False
 
 
+def updateheadertype(values, window, savecolheader):
+    global headersandtypes
+    global newheadersandtypes
+
+    ndx = headers.index(savecolheader)
+    headers[ndx] = values['_COLHEADER_']
+    types[ndx] = values['_COLTYPE_']
+    newheadersandtypes = list(zip(headers, types))
+    window.FindElement('_HEADERSANDTYPES_').Update(newheadersandtypes)
+    # print('headersandtypes =>', headersandtypes)
+    # print('newheadersandtypes =>', newheadersandtypes)
+    headersandtypes = newheadersandtypes
+    # print('headersandtypes =>', headersandtypes)
+    window.Refresh()
+
+
 def validatedbtable(atablename, adbfile, window):
     if len(values['_TABLENAME_'])==0:
         sg.Popup('Enter a tablename')
@@ -439,7 +456,7 @@ def validatedbtable(atablename, adbfile, window):
     else:
         sg.Popup('Database file does not exist - it will be created')
         return True
-        
+
     if not tableexists(con, values['_TABLENAME_']):
         write_to_message_area(window, 'Table does not exist - it will be created.')
         # thetablename = values['_TABLENAME_']
@@ -464,11 +481,11 @@ mainscreencolumn3 = [[sg.Text('CSV File', background_color=mediumblue, justifica
 
 mainscreencolumn4 = [[sg.Text('Headers / Types', background_color=mediumblue, justification='left', size=(30, 1))],
                      [sg.Listbox(values=headersandtypes, size=(37, 10), key='_HEADERSANDTYPES_', enable_events=True)]]
-                     
-mainscreencolumn5 = [[sg.Text('Column Header', justification='left', size=(30, 1))],
+
+mainscreencolumn5 = [[sg.Text('Column Header', justification='left', size=(34, 1))],
                      [sg.InputText(key='_COLHEADER_', size=(39, 1))],
-                     [sg.Text('Column Type', justification='left', size=(30, 1))],
-                     [sg.InputText(key='_COLTYPE_', size=(39, 1))],
+                     [sg.Text('Column Type', justification='right', size=(34, 1))],
+                     [sg.InputText(key='_COLTYPE_', size=(39, 1), justification='right')],
                      [sg.Button('Update Header/Type', key='_UPDATEHEADERTYPE_')]]
 
 # Define the mainscreen layout using the above layouts
@@ -499,8 +516,10 @@ while True:  # Event Loop
         write_to_message_area(window, 'Converting the file')
         fill_csv_listbox(window, values)
         # updatecolumnheader(event, window)
+
         thedbfile = values['_DBFILENAME_']
         converttf = convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
+
         if converttf:
             write_to_message_area(window, 'SUCCESS - File converted')
             con = create_connection(thedbfile)
@@ -523,12 +542,12 @@ while True:  # Event Loop
 
         if validatedbtable(values['_TABLENAME_'], values['_DBFILENAME_'], window):
             tablenamecheck = True
-            
+
         if csvfilecheck:
             fo = fillheadersandtypes(thecsvfile, window)
             updatecolumnheader(event, window)
             window.Refresh()
-            
+
         if csvfilecheck and dbfilecheck and tablenamecheck:
             sg.Popup('Filenames and Tablename check complete.')
 
@@ -546,9 +565,5 @@ while True:  # Event Loop
         window.Refresh()
 
     elif event=='_UPDATEHEADERTYPE_':
-        ndx = headers.index(savecolheader)
-        headers[ndx] = values['_COLHEADER_']
-        types[ndx] = values['_COLTYPE_']
-        newheadersandtypes = list(zip(headers, types))
-        window.FindElement('_HEADERSANDTYPES_').Update(newheadersandtypes)
-        window.Refresh()
+        savecolheader = values['_HEADERSANDTYPES_'][0][0]
+        updateheadertype(values, window, savecolheader)
