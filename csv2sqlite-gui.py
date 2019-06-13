@@ -26,6 +26,8 @@ lightblue = '#b9def4'
 mediumblue = '#d2d2df'
 mediumblue2 = '#534aea'
 headersandtypes = []
+newheadersandtypes = []
+dheadersandtypes = []
 dialect = ''
 header_given = ''
 types = []
@@ -35,8 +37,15 @@ mydbfilename = 'datbase'
 mytablename = 'tablename'
 thedbfile = ''
 filecheckok = True
+csvfilecheck = False
+dbfilecheck = False
+tablenamecheck = False
 csvdata = []
 read_mode = 'rt'
+savecolheader = ''
+savecoltype = ''
+headers = []
+types = []
 
 
 def table_example(csvfilename):
@@ -61,16 +70,15 @@ def table_example(csvfilename):
 
     layout = [[sg.Table(values=data,
             headings=header_list,
-            max_col_width=20,
+            max_col_width=min(round(250 / len(header_list)),10),
             auto_size_columns=True,
             justification='left',
             display_row_numbers='true',
             alternating_row_color='lightblue',
-            num_rows=min(len(data), 5))]]
+            num_rows=min(len(data), 10))]]
 
     tablewindow = sg.Window('Table', grab_anywhere=False, keep_on_top=True).Layout(layout)
     event, values = tablewindow.Read()
-
 
 # create a database connection to a SQLite database
 def create_connection(my_db_file):
@@ -108,7 +116,8 @@ def fill_csv_listbox(window, values):
 
         # print('csvdata=>', csvdata)
 
-    window.FindElement('_CSVROWS_').Update(csvdata[:][0])
+        window.FindElement('_CSVROWS_').Update(csvdata[:][0])
+        window.Refresh()
 
 
 def fill_db_listbox(window, values, con):
@@ -262,7 +271,7 @@ def convert(filepath_or_fileobj, dbpath, table, events, window):
     # fill the headers and types list boxes - get file object back
     fo = fillheadersandtypes(filepath_or_fileobj, window)
 
-    # now load data
+    # now get columns headers and types
     _columns = ','.join(['"%s" %s' % (header, _type) for (header, _type) in headersandtypes])
 
     # sg.Popup('_columns=', _columns,keep_on_top=True)
@@ -325,7 +334,10 @@ def convert(filepath_or_fileobj, dbpath, table, events, window):
 
 def fillheadersandtypes(filepath_or_fileobj, window):
     global headersandtypes
+    global dheadersandtypes
     global dialect
+    global headers
+    global types
 
     fo = open_csv_file(filepath_or_fileobj)
     try:
@@ -340,8 +352,19 @@ def fillheadersandtypes(filepath_or_fileobj, window):
     # get the list of types
     types = get_csv_types(fo, window, headers, dialect)
 
+    # number the columns
+    colnumbers = list([str(x) for x in range(len(types))])
+
     # combine headers and types into space separated values
-    headersandtypes = list(zip(headers, types))
+    if len(newheadersandtypes)==0:
+        headersandtypes = list(zip(headers, types))
+        dheadersandtypes = dict(headersandtypes)
+        # print('dheadersandtypes =>', dheadersandtypes)
+        # print('headersandtypes =>', headersandtypes)
+        # print('colnumbers =>', colnumbers)
+    else:
+        headersandtypes = newheadersandtypes
+
     return fo
 
 
@@ -368,42 +391,118 @@ def getdbfilename(defaultfilename, window, thecsvfile=None):
 
 def gettablename(defaulttablename):
     tablename = sg.PopupGetText('Please enter a table name', default_text=defaulttablename, keep_on_top=True)
-    thetablename = (tablename.replace(' ', '_'))
+    thetablename = (tablename.replace(' ', '_'))  #
     tablename = (thetablename.replace('-', '_')) # '-' throws an exception when creating a table
     return tablename
 
 
 def updatecolumnheader(events, window):
+    global dheadersandtypes
     global headersandtypes
-    window.FindElement('_TYPES_').Update(headersandtypes)
+    # sg.Popup('headers and types =>', headersandtypes)
+    window.FindElement('_HEADERSANDTYPES_').Update(headersandtypes)
+    window.Refresh()
+
+
+def validatecsvfile(values, window):
+    # global thecsvfile
+    if len(values['_CSVFILENAME_'])==0:
+        sg.Popup('Enter a csv filename')
+        return False
+    elif os.path.isfile(values['_CSVFILENAME_']):
+        write_to_message_area(window, 'CSV file exists')
+        return True
+    else:
+        sg.Popup(values['_CSVFILENAME_'], 'not found')
+        return False
+
+
+def validatedbfile(adbfile, values, window):
+    if len(values['_DBFILENAME_'])==0:
+        sg.Popup('Enter a db filename')
+        return False
+    elif os.path.isfile(values['_DBFILENAME_']):
+        write_to_message_area(window, 'Database file exists')
+        thedbfile = values['_DBFILENAME_']
+        return True
+    else:
+        sg.Popup(values['_DBFILENAME_'], 'not found - it will be created.')
+        return False
+
+
+def updateheadertype(values, window, savecolheader):
+    global headersandtypes
+    global newheadersandtypes
+
+    ndx = headers.index(savecolheader)
+    headers[ndx] = values['_COLHEADER_']
+    types[ndx] = values['_COLTYPE_']
+    newheadersandtypes = list(zip(headers, types))
+    window.FindElement('_HEADERSANDTYPES_').Update(newheadersandtypes)
+    # print('headersandtypes =>', headersandtypes)
+    # print('newheadersandtypes =>', newheadersandtypes)
+    headersandtypes = newheadersandtypes
+    # print('headersandtypes =>', headersandtypes)
+    window.Refresh()
+
+
+def validatedbtable(atablename, adbfile, window):
+    if len(values['_TABLENAME_'])==0:
+        sg.Popup('Enter a tablename')
+        return False
+    elif os.path.isfile(values['_DBFILENAME_']):
+        con = create_connection(adbfile)
+    else:
+        sg.Popup('Database file does not exist - it will be created')
+        return True
+
+    if not tableexists(con, values['_TABLENAME_']):
+        write_to_message_area(window, 'Table does not exist - it will be created.')
+        # thetablename = values['_TABLENAME_']
+        return True
 
 
 # define layouts
-# layout mainscreen window
 mainscreencolumn1 = [[sg.Text('Filenames', background_color=lightblue, justification='center', size=(25, 1))],
-        [sg.Text('CSV File Name', justification='right', size=(20, 1)),
-        sg.InputText(key='_CSVFILENAME_', size=(78, 1), enable_events=True), sg.FileBrowse(file_types=(('CSV Files', '*.csv'),))],
-        [sg.Text('Database File Name', justification='right', size=(20, 1)),
-        sg.InputText(key='_DBFILENAME_', size=(78, 1)), sg.FileBrowse(file_types=(("Sqlite files", "*.db"),))],
-        [sg.Text('Table Name', justification='right', size=(20, 1)),
-        sg.InputText(key='_TABLENAME_', size=(78, 1))],
+        [sg.Text('CSV File Name', justification='right', size=(15, 1)),
+         sg.InputText(key='_CSVFILENAME_', size=(80, 1), enable_events=True),
+         sg.FileBrowse(file_types=(('CSV Files', '*.csv'),))],
+        [sg.Text('Database File Name', justification='right', size=(15, 1)),
+         sg.InputText(key='_DBFILENAME_', size=(80, 1)), sg.FileBrowse(file_types=(("Sqlite files", "*.db"),))],
+        [sg.Text('Table Name', justification='right', size=(15, 1)),
+         sg.InputText(key='_TABLENAME_', size=(80, 1))],
         [sg.Button('Check Filenames', key='_BUTTON-CHECK-FILENAMES_', disabled=False)]]
 
 mainscreencolumn3 = [[sg.Text('CSV File', background_color=mediumblue, justification='left', size=(60, 1))],
-        [sg.Multiline(size=(100, 2), key='_CSVROWS_', autoscroll=False)],
+        [sg.Multiline(size=(104, 2), key='_CSVROWS_', autoscroll=False)],
         [sg.Text('Database File', background_color=mediumblue, justification='left', size=(60, 1))],
-        [sg.Multiline(size=(100, 2), key='_DBTABLEROWS_', autoscroll=False)]]
+        [sg.Multiline(size=(104, 2), key='_DBTABLEROWS_', autoscroll=False)]]
 
-mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue)],
-                    [sg.Column(mainscreencolumn3, background_color=lightblue)],
-                    [sg.Text('Message Area', size=(100, 1), key='_MESSAGEAREA_')],
-                    [sg.Button('Convert', key='_CONVERT_'), sg.Button('Preview CSV Data', key='_CSVPREVIEW_'),
+mainscreencolumn4 = [[sg.Text('Headers / Types', background_color=mediumblue, justification='left', size=(30, 1))],
+                     [sg.Listbox(values=headersandtypes, size=(37, 10), key='_HEADERSANDTYPES_', enable_events=True)]]
+
+mainscreencolumn5 = [[sg.Text('Column Header', justification='left', size=(34, 1))],
+                     [sg.InputText(key='_COLHEADER_', size=(39, 1))],
+                     [sg.Text('Column Type', justification='right', size=(34, 1))],
+                     [sg.InputText(key='_COLTYPE_', size=(39, 1), justification='right')],
+                     [sg.Button('Update Header/Type', key='_UPDATEHEADERTYPE_')]]
+
+# Define the mainscreen layout using the above layouts
+mainscreenlayout = [[sg.Column(mainscreencolumn1, background_color=mediumblue),
+                     sg.Column(mainscreencolumn5, background_color=mediumblue)],
+                    [sg.Column(mainscreencolumn3, background_color=lightblue),
+                     sg.Column(mainscreencolumn4)],
+                    [sg.Text('Message Area', size=(131, 1), key='_MESSAGEAREA_')],
+                    [sg.Button('Convert', key='_CONVERT_'),
+                     sg.Button('Preview CSV Data', key='_CSVPREVIEW_'),
                      sg.Exit()]]
 
-# if __name__ == '__main__':
+
 # ########################################
 # initialize main screen window
-window = sg.Window('CSV2Sqlite-GUI', background_color=mediumblue2, default_element_size=(20, 1)).Layout(mainscreenlayout)
+sg.SetOptions(element_padding=(2, 2))
+window = sg.Window('CSV2Sqlite-GUI', background_color=mediumblue2,
+        default_element_size=(20, 1)).Layout(mainscreenlayout)
 window.Finalize()
 window.Refresh()
 
@@ -415,53 +514,57 @@ while True:  # Event Loop
     elif event == '_CONVERT_':
         write_to_message_area(window, 'Converting the file')
         fill_csv_listbox(window, values)
+        # updatecolumnheader(event, window)
+
         thedbfile = values['_DBFILENAME_']
         converttf = convert(values['_CSVFILENAME_'], values['_DBFILENAME_'], values['_TABLENAME_'], values, window)
+
         if converttf:
             write_to_message_area(window, 'SUCCESS - File converted')
             con = create_connection(thedbfile)
             fill_db_listbox(window, values, con)
         else:
             write_to_message_area(window, 'FAIL - File NOT converted')
+
     elif event == '_BUTTON-CHECK-FILENAMES_':
         filecheckok = True  # reset the flag to True
-        # check the file names
-        if len(values['_CSVFILENAME_']) == 0:
-            sg.Popup('Enter a csv filename')
-            filecheckok = False
-        elif os.path.isfile(values['_CSVFILENAME_']):
-            write_to_message_area(window, 'CSV file exists')
+        csvfilecheck = False  # reset the flag to False
+        dbfilecheck = False  # reset the flag to False
+        tablenamecheck = False  # reset the flag to False
+        if validatecsvfile(values, window):
             thecsvfile = values['_CSVFILENAME_']
-        else:
-            filecheckok = False
-            sg.Popup(values['_CSVFILENAME_'], 'not found')
+            csvfilecheck = True
 
-        if len(values['_DBFILENAME_']) == 0:
-            sg.Popup('Enter a db filename')
-            filecheckok = False
-        elif os.path.isfile(values['_DBFILENAME_']):
-            write_to_message_area(window, 'Database file exists')
+        if validatedbfile(values['_DBFILENAME_'], values, window):
             thedbfile = values['_DBFILENAME_']
-        else:
-            filecheckok = False
-            sg.Popup(values['_DBFILENAME_'], 'not found - it will be created.')
+            dbfilecheck = True
 
-        # if not len(values['_DBFILENAME_'])==0:
-        if filecheckok:
-            con = create_connection(thedbfile)
-            if len(values['_TABLENAME_'])==0:
-                sg.Popup('Enter a tablename')
-                filecheckok = False
-            elif not tableexists(con, values['_TABLENAME_']):
-                write_to_message_area(window, 'Table does not exist - it will be created.')
-                thetablename = values['_TABLENAME_']
+        if validatedbtable(values['_TABLENAME_'], values['_DBFILENAME_'], window):
+            tablenamecheck = True
 
-        window.Refresh()
-        if filecheckok:
+        if csvfilecheck:
+            fo = fillheadersandtypes(thecsvfile, window)
+            updatecolumnheader(event, window)
+            window.Refresh()
+
+        if csvfilecheck and dbfilecheck and tablenamecheck:
             sg.Popup('Filenames and Tablename check complete.')
 
     elif event=='_CSVPREVIEW_':
         if os.path.isfile(values['_CSVFILENAME_']):
+            window.Disappear()
             table_example(values['_CSVFILENAME_'])
+            window.Reappear()
         else:
             sg.Popup('CSV file not found.')
+
+    elif event=='_HEADERSANDTYPES_':
+        window.FindElement('_COLHEADER_').Update(values['_HEADERSANDTYPES_'][0][0])
+        savecolheader = values['_HEADERSANDTYPES_'][0][0]
+        window.FindElement('_COLTYPE_').Update(values['_HEADERSANDTYPES_'][0][1])
+        savecoltype = values['_HEADERSANDTYPES_'][0][1]
+        window.Refresh()
+
+    elif event=='_UPDATEHEADERTYPE_':
+        savecolheader = values['_HEADERSANDTYPES_'][0][0]
+        updateheadertype(values, window, savecolheader)
