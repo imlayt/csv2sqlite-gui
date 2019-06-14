@@ -297,21 +297,24 @@ def convert(filepath_or_fileobj, dbpath, table, events, window):
     else:
         _insert_tmpl = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(headersandtypes)))
 
-# sdfgvb
-        line = 0
+        # check each row and each column in the row
+        # if the field type is integer or real, remove (), #, comma, space, and change a leading ( into a leading -
+        # this is necessary for the data to load properly into the database
         for row in reader:
-            line += 1
             if len(row) == 0:
                 continue
             else:
                 for column in range(0, len(row)):
-                    columntype = types[column]
+                    columntype = headersandtypes[column][1]
+                    # sg.Popup('columntype =>', columntype)
                     tmpvalue = str(row[column])
 
-                    if len(tmpvalue) == 0:
+                    if len(str(row[column]))==0:
                         continue
                     elif columntype == 'real':
                         row[column] = tmpvalue.replace('$', '')
+                        tmpvalue = str(row[column])
+                        row[column] = tmpvalue.replace(' ', '')
                         tmpvalue = str(row[column])
                         row[column] = tmpvalue.replace(',', '')
                         tmpvalue = str(row[column])
@@ -321,6 +324,8 @@ def convert(filepath_or_fileobj, dbpath, table, events, window):
                     elif columntype == 'integer':
                         tmpvalue = str(row[column])
                         row[column] = tmpvalue.replace('$', '')
+                        tmpvalue = str(row[column])
+                        row[column] = tmpvalue.replace(' ', '')
                         tmpvalue = str(row[column])
                         row[column] = tmpvalue.replace(',', '')
                 c.execute(_insert_tmpl, row)
@@ -484,7 +489,7 @@ mainscreencolumn4 = [[sg.Text('Headers / Types', background_color=mediumblue, ju
 mainscreencolumn5 = [[sg.Text('Column Header', justification='left', size=(34, 1))],
                      [sg.InputText(key='_COLHEADER_', size=(39, 1))],
                      [sg.Text('Column Type', justification='right', size=(34, 1))],
-                     [sg.InputText(key='_COLTYPE_', size=(39, 1), justification='right')],
+                     [sg.InputCombo(('text', 'numeric', 'integer', 'real', 'blob'), key='_COLTYPE_', size=(37, 1))],
                      [sg.Button('Update Header/Type', key='_UPDATEHEADERTYPE_')]]
 
 # Define the mainscreen layout using the above layouts
