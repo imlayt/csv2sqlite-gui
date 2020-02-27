@@ -5,3 +5,4 @@ This script is based on csv2sqlite.py. That script (as the name implies) convert
 
 In addition to putting a front end on the conversion script, I added some functionality to update filenames and change the table name if it already exists in the database. Future improvements will include the ability to update table column names and column types before the file is converted into a table.
 
+	![Screen shot of the application](CSV2Sqlite-GUI.png)
